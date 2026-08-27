@@ -1,0 +1,40 @@
+HELP.md
+target/
+
+### H2 데이터베이스 파일 (데이터는 로컬에서만 유지, 저장소에 포함하지 않음) ###
+/data/
+*.db
+*.mv.db
+*.trace.db
+.DS_Store
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
