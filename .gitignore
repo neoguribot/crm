@@ -1,40 +1,41 @@
-HELP.md
-target/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-### H2 데이터베이스 파일 (데이터는 로컬에서만 유지, 저장소에 포함하지 않음) ###
-/data/
-*.db
-*.mv.db
-*.trace.db
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+*.pem
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# env files (can opt-in for committing if needed)
+.env*
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# vercel
+.vercel
 
-### VS Code ###
-.vscode/
+# typescript
+*.tsbuildinfo
+next-env.d.ts

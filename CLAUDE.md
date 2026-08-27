@@ -1,47 +1,39 @@
+@AGENTS.md
+
 # CLAUDE.md
 
-이 저장소에서 작업할 때 반드시 따르는 개발 원칙이다.
-
-## 프로젝트 개요
-
-소규모 고객 관리를 위한 CRM MVP. 서버 사이드 렌더링 단일 애플리케이션.
+고객관리 CRM (금은방). 이전 Spring Boot MVP 를 Next.js 스택으로 전환 중이다.
+과거 구현은 `archive/spring-boot-mvp` 브랜치와 `spring-boot-mvp` 태그에 보존되어 있다.
 
 ## 기술 스택 (확정)
 
-- Java 21 (17 이상)
-- Spring Boot 4.1.1
-- Spring Web MVC
-- Thymeleaf
-- Spring Data JPA
-- Jakarta Bean Validation
-- H2 Database (파일 모드)
-- Maven (Maven Wrapper `./mvnw` 사용)
+- Next.js 16 App Router + TypeScript
+- Supabase (PostgreSQL + Auth)
+- Tailwind CSS v4 + shadcn/ui
+- 배포: Vercel
+- 패키지 매니저: npm
+
+> Next.js 16 은 학습 데이터와 다른 breaking change 가 있다. 코드 작성 전 `node_modules/next/dist/docs/` 의 관련 가이드를 확인한다(AGENTS.md 참고).
 
 ## 개발 원칙
 
-- Spring Boot, Spring Data JPA, H2 file mode, Thymeleaf를 사용한다.
-- React 등 별도 프론트엔드 프레임워크를 추가하지 않는다.
-- 한 번에 하나의 작은 기능만 구현한다.
-- MVP 범위 밖 기능을 임의로 추가하지 않는다.
+- App Router 와 TypeScript 를 사용한다.
+- 가능한 한 Server Component 를 기본으로 한다. 사용자 상호작용이 필요한 부분만 Client Component 로 만든다.
+- 데이터 변경은 Server Action, 외부·프로토콜 진입점(인증 콜백 등)은 Route Handler 로 한다.
+- 데이터베이스는 Supabase PostgreSQL, 인증은 Supabase Auth 를 사용한다.
+- Supabase 클라이언트는 브라우저용(`createBrowserClient`, anon key)과 서버용(`createServerClient`, cookies)을 구분한다.
+- `service_role` 키는 브라우저 코드/클라이언트 번들에 절대 포함하지 않는다. `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
+- 모든 테이블에 Row Level Security 를 적용한다.
+- UI 는 Tailwind CSS 와 shadcn/ui 로 구성한다. React 등 외의 별도 프론트엔드 프레임워크를 추가하지 않는다.
+- 금액·중량·순도는 JavaScript 부동소수점 계산에 의존하지 않는다. PostgreSQL `numeric` 에 저장하고, 앱에서는 문자열로 받아 Decimal 라이브러리로 다룬다.
+- 날짜/시간대 기준은 `Asia/Seoul` 고정이다. 순수 날짜는 `date`, 타임스탬프는 `timestamptz`(UTC 저장).
+- 환경변수와 비밀키를 Git 에 커밋하지 않는다. `.env.example` 에는 키 이름만 둔다.
+- 한 번에 하나의 작은 기능만 구현한다. MVP 범위 밖 기능을 임의로 추가하지 않는다.
 - 기존에 정상 작동하는 기능을 깨뜨리지 않는다.
-- 구현 후 관련 테스트를 실행한다.
-- 금액은 `BigDecimal`을 사용한다.
-- 날짜는 `LocalDate`를 사용한다.
-- 화면과 검증 오류 메시지는 한국어로 작성한다.
-- H2 데이터는 애플리케이션 재시작 후에도 유지되어야 한다.
+- 구현 후 타입 검사(`npx tsc --noEmit`), 린트(`npm run lint`), 빌드(`npm run build`), 관련 테스트를 실행한다.
 - 정상 작동이 확인된 단계마다 Git 커밋한다. 단, 사용자가 직접 확인하기 전에는 커밋하지 않는다.
 
-## 작업 시 유의사항
-
-- 기존 파일을 삭제하거나 덮어쓰기 전에 내용을 먼저 확인한다.
-- 기존 Git 변경사항이 있다면 임의로 되돌리거나 삭제하지 않는다.
-- 최신 버전이라는 이유만으로 새로운 기술이나 라이브러리를 추가하지 않는다.
-- 테스트 실패를 숨기거나 건너뛰지 않는다.
-- 오류가 발생하면 원인을 확인하고 해당 단계 범위 안에서 최소한으로 수정한다.
-
-## MVP 기능 범위
-
-필수 기능(단계별로 하나씩 구현):
+## MVP 기능 범위 (단계별로 하나씩)
 
 1. 고객 등록·조회·수정
 2. 고객별 거래 기록
@@ -49,31 +41,33 @@
 4. 대시보드 요약
 5. 리마인드 대상 고객 표시
 
-제외 기능: 로그인·권한관리, 문자·카카오톡 자동발송, 결제·재고 연동,
-복잡한 통계·그래프, 별도 프론트엔드 프레임워크, 외부 서버 배포.
+제외: 고객 삭제, 문자·카카오톡 자동발송, 결제·재고 연동, 복잡한 통계·그래프.
 
-## 빌드 / 실행 / 테스트
+## 데이터 모델
+
+- `customers` 1 : N `trade_records` (`trade_records.customer_id` FK)
+- id 는 UUID (`gen_random_uuid()`)
+- 구매목적 복수 선택은 PostgreSQL enum 배열 `purchase_purpose[]` (별도 관계 테이블 아님)
+- 금액 `numeric(15,0)`, 순도 `numeric(5,2)`, 중량 `numeric(10,3)`
+- 최근 방문일 / 리마인드 상태는 저장하지 않고 조회 시 계산
+  - 최근 방문일 = `max(trade_records.trade_date)` ∨ `customers.first_visit_date`
+  - 미방문 구간: 30 / 90 / 180 / 365일
+  - 리마인드 분류: 이벤트 지남 / 7일 이내 / 30일 이내 / 예정 없음
+
+enum 값: 유입경로(DAANGN, NAVER_PLACE, ACQUAINTANCE_REFERRAL, WALK_IN, OTHER),
+구매목적(WEDDING_GIFT, FIRST_BIRTHDAY_RING, INVESTMENT_GOLD_BAR, BUY_BACK, OTHER),
+거래구분(SALE, PURCHASE), 품목(GOLD_BAR, JEWELRY_24K, GOLD_18K, GOLD_14K, SILVER, OTHER).
+코드값과 한국어 표시명을 분리한다.
+
+## 명령
 
 ```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk@21   # 필요 시
-./mvnw test              # 테스트
-./mvnw spring-boot:run   # 실행 (http://localhost:8080)
+npm run dev            # 개발 서버 (http://localhost:3000)
+npm run build          # 프로덕션 빌드
+npx tsc --noEmit       # 타입 검사
+npm run lint           # 린트
 ```
 
-## 주요 설정
+## 진행 상황
 
-- H2: `jdbc:h2:file:./data/crm` (`data/` 는 gitignore)
-- 스키마: `spring.jpa.hibernate.ddl-auto=update`
-- H2 콘솔: `/h2-console` (개발용)
-
-## Spring Boot 4 참고
-
-- 스타터 이름: `spring-boot-starter-web` → `spring-boot-starter-webmvc`
-- H2 콘솔 자동설정은 별도 의존성 `spring-boot-h2console`
-- 테스트 슬라이스가 모듈별로 분리됨: `spring-boot-starter-webmvc-test`, `spring-boot-starter-data-jpa-test` 등
-- `@WebMvcTest`, `@AutoConfigureMockMvc` 패키지: `org.springframework.boot.webmvc.test.autoconfigure`
-
-## 현재 진행 상황
-
-- 0단계: 프로젝트 초기 구성 (진입점, 시작 화면 `/`, 기본 테스트, README, CLAUDE.md). H2 파일 모드 설정 완료.
-- 다음: 고객 등록 기능 (Customer 엔티티 + 등록 폼).
+- Next.js 16 스캐폴딩 완료 (`migrate/nextjs` 브랜치). 다음: shadcn/ui 초기화 + Supabase 클라이언트 유틸.
