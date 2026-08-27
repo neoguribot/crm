@@ -17,25 +17,49 @@
 | 패키지 매니저 | npm |
 | Node.js | 20 이상 |
 
-## 로컬 개발
+## 설치
 
 ```bash
 npm install
-npm run dev
 ```
 
-http://localhost:3000 접속.
+## 환경변수
 
-환경변수는 `.env.local` 에 둔다(Git 에 커밋하지 않음). 필요한 키 이름은 `.env.example` 참고.
-Supabase 연동 후 `vercel env pull .env.local` 로 받을 수 있다.
+```bash
+cp .env.example .env.local
+```
+
+`.env.local` 에 실제 값을 채운다. 이 파일은 Git 에 커밋되지 않는다(`.gitignore` 처리).
+필요한 변수 이름은 `.env.example` 참고. Supabase 연동 후에는 `vercel env pull .env.local` 로 받을 수도 있다.
+
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase 프로젝트 URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — 공개(anon) 키
+
+> 아직 Supabase 프로젝트를 연결하지 않았으므로 값이 없어도 시작 화면은 동작한다.
+
+## 실행
+
+```bash
+npm run dev            # 개발 서버 (http://localhost:3000)
+```
 
 ## 검사
 
 ```bash
 npx tsc --noEmit       # 타입 검사
 npm run lint           # 린트
-npm run build          # 빌드
+npm run build          # 프로덕션 빌드
 ```
+
+## shadcn/ui
+
+컴포넌트는 `components/ui/` 에 소스로 추가된다. 필요한 것만 그때그때 설치한다.
+
+```bash
+npx shadcn@latest add <컴포넌트>
+```
+
+현재 설치됨: `button`, `card`.
 
 ## 기능 범위 (MVP)
 
