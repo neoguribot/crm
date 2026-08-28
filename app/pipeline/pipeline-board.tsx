@@ -16,8 +16,10 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatKoreanDate } from "@/lib/date";
+import { cn } from "@/lib/utils";
+import { formatKoreanDate, todayInSeoul } from "@/lib/date";
 import { CUSTOMER_STAGE_LABELS } from "@/lib/labels";
+import { classifyRemindStatus } from "@/lib/reminders/status";
 import type { CustomerStage } from "@/lib/types/database";
 import type { PipelineCustomer } from "@/lib/customers/queries";
 import {
@@ -27,6 +29,38 @@ import {
   prevStage,
 } from "@/lib/customers/pipeline";
 import { updateCustomerStage } from "@/app/pipeline/actions";
+
+/** 단계별 컬럼 상단 색상 표식 (구분용, 작은 점만). */
+const STAGE_DOT: Record<CustomerStage, string> = {
+  NEW_INQUIRY: "bg-sky-500",
+  CONSULTING: "bg-violet-500",
+  QUOTE_SENT: "bg-amber-500",
+  PURCHASE_CONFIRMED: "bg-emerald-500",
+  AFTER_CARE: "bg-zinc-400",
+};
+
+function EventBadge({ date }: { date: string }) {
+  const status = classifyRemindStatus(date, todayInSeoul());
+  const overdue = status === "OVERDUE";
+  const soon = status === "WITHIN_7_DAYS";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-xs",
+        overdue
+          ? "text-destructive"
+          : soon
+            ? "text-amber-600 dark:text-amber-500"
+            : "text-muted-foreground",
+      )}
+    >
+      <span aria-hidden>{overdue ? "!" : "•"}</span>
+      이벤트 {formatKoreanDate(date)}
+      {overdue ? " (지남)" : null}
+    </span>
+  );
+}
 
 function CardItem({
   customer,
@@ -46,40 +80,54 @@ function CardItem({
   return (
     <div
       ref={setNodeRef}
-      style={transform ? { transform: CSS.Translate.toString(transform) } : undefined}
-      className={`rounded-lg border bg-card p-3 text-sm shadow-sm ${
-        isDragging ? "opacity-50" : ""
-      }`}
+      style={
+        transform ? { transform: CSS.Translate.toString(transform) } : undefined
+      }
+      className={cn(
+        "rounded-lg border bg-card p-3 text-sm shadow-xs transition-shadow",
+        isDragging
+          ? "opacity-60 shadow-lg ring-1 ring-border"
+          : "hover:shadow-sm",
+      )}
     >
       <div
         {...listeners}
         {...attributes}
-        className="cursor-grab active:cursor-grabbing"
+        className="touch-none cursor-grab active:cursor-grabbing"
       >
-        <Link
-          href={`/customers/${customer.id}`}
-          className="font-medium hover:underline"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          {customer.name}
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href={`/customers/${customer.id}`}
+            className="font-medium hover:underline"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {customer.name}
+          </Link>
+          <span
+            aria-hidden
+            className="mt-0.5 text-xs leading-none text-muted-foreground/60 select-none"
+          >
+            ⠿
+          </span>
+        </div>
         <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
           {customer.phone}
         </p>
         {customer.next_event_date ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            다음 이벤트 {formatKoreanDate(customer.next_event_date)}
+          <p className="mt-1.5">
+            <EventBadge date={customer.next_event_date} />
           </p>
         ) : null}
       </div>
 
-      <div className="mt-2 flex gap-1">
+      <div className="mt-2.5 flex gap-1 border-t pt-2">
         <Button
           type="button"
           size="xs"
-          variant="outline"
+          variant="ghost"
+          className="flex-1"
           disabled={disabled || !prev}
-          aria-label="이전 단계로"
+          aria-label={prev ? `${CUSTOMER_STAGE_LABELS[prev]} 단계로` : "이전 단계 없음"}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => prev && onMove(customer.id, prev)}
         >
@@ -88,9 +136,10 @@ function CardItem({
         <Button
           type="button"
           size="xs"
-          variant="outline"
+          variant="ghost"
+          className="flex-1"
           disabled={disabled || !next}
-          aria-label="다음 단계로"
+          aria-label={next ? `${CUSTOMER_STAGE_LABELS[next]} 단계로` : "다음 단계 없음"}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => next && onMove(customer.id, next)}
         >
@@ -118,17 +167,25 @@ function Column({
     <section
       ref={setNodeRef}
       aria-label={CUSTOMER_STAGE_LABELS[stage]}
-      className={`flex w-64 shrink-0 flex-col gap-2 rounded-xl border bg-muted/30 p-3 ${
-        isOver ? "ring-2 ring-ring" : ""
-      }`}
+      className={cn(
+        "flex w-64 shrink-0 flex-col gap-2.5 rounded-xl border bg-muted/40 p-3 transition-colors",
+        isOver && "border-primary/50 bg-primary/5",
+      )}
     >
-      <h2 className="flex items-center justify-between text-sm font-semibold">
-        {CUSTOMER_STAGE_LABELS[stage]}
-        <Badge variant="secondary">{customers.length}</Badge>
-      </h2>
-      <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className={cn("size-2 shrink-0 rounded-full", STAGE_DOT[stage])}
+        />
+        <h2 className="text-sm font-semibold">{CUSTOMER_STAGE_LABELS[stage]}</h2>
+        <Badge variant="secondary" className="ml-auto tabular-nums">
+          {customers.length}
+        </Badge>
+      </div>
+
+      <div className="flex min-h-24 flex-col gap-2">
         {customers.length === 0 ? (
-          <p className="py-4 text-center text-xs text-muted-foreground">
+          <p className="rounded-lg border border-dashed py-6 text-center text-xs text-muted-foreground">
             고객 없음
           </p>
         ) : (
@@ -199,12 +256,21 @@ export function PipelineBoard({
   return (
     <div className="flex flex-col gap-3">
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+        >
           {error}
         </p>
       ) : null}
       <DndContext id="pipeline-board" sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div
+          aria-busy={pending}
+          className={cn(
+            "-mx-1 flex gap-3 overflow-x-auto px-1 pb-3 transition-opacity",
+            pending && "opacity-70",
+          )}
+        >
           {PIPELINE_STAGES.map((stage) => (
             <Column
               key={stage}
