@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,7 @@ import {
   PURCHASE_PURPOSE_LABELS,
 } from "@/lib/labels";
 import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
+import { formatKoreanPhone } from "@/lib/phone";
 import type { CustomerDetail } from "@/lib/customers/queries";
 import {
   type CustomerFormState,
@@ -62,7 +63,9 @@ export function CustomerForm({
   const errors = state.fieldErrors;
 
   const nameDefault = v?.name ?? defaults?.name ?? "";
-  const phoneDefault = v?.phone ?? defaults?.phone ?? "";
+  const [phone, setPhone] = useState(
+    formatKoreanPhone(v?.phone ?? defaults?.phone ?? ""),
+  );
   const channelDefault =
     v?.inflow_channel ?? defaults?.inflow_channel ?? "";
   const firstVisitDefault =
@@ -100,7 +103,9 @@ export function CustomerForm({
           id="phone"
           name="phone"
           inputMode="tel"
-          defaultValue={phoneDefault}
+          placeholder="예: 010-1234-5678"
+          value={phone}
+          onChange={(e) => setPhone(formatKoreanPhone(e.target.value))}
           required
         />
         <FieldError message={errors.phone} />
