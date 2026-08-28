@@ -19,6 +19,17 @@ export function currentMonthLabelInSeoul(): string {
   return `${year}년 ${Number(month)}월`;
 }
 
+/**
+ * DB 의 `YYYY-MM-DD` 날짜 문자열을 화면용 한국어 형식으로.
+ * 예: "2026-08-20" → "2026. 8. 20." (시간대 변환 없음, 순수 문자열 파싱)
+ * 값이 없으면 빈 문자열을 반환한다(호출 측에서 "없음" 등으로 대체).
+ */
+export function formatKoreanDate(iso: string | null | undefined): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y, m, d] = iso.split("-");
+  return `${y}. ${Number(m)}. ${Number(d)}.`;
+}
+
 /** `YYYY-MM-DD` 가 실제 존재하는 날짜인지 확인한다. */
 export function isValidIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
