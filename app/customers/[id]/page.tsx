@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/card";
 import { APP_NAME } from "@/lib/constants";
 import { getCustomerById } from "@/lib/customers/queries";
+import { listTradeRecordsByCustomer } from "@/lib/trades/queries";
 import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/require-user";
+import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
 
 export const metadata: Metadata = {
   title: `고객 상세 · ${APP_NAME}`,
@@ -55,6 +57,7 @@ export default async function CustomerDetailPage({
   }
 
   const c = result.data;
+  const trades = await listTradeRecordsByCustomer(c.id);
   const purposes =
     c.purchase_purposes.length > 0
       ? c.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
@@ -98,6 +101,8 @@ export default async function CustomerDetailPage({
           <Row label="비고" value={c.memo ?? "없음"} />
         </CardContent>
       </Card>
+
+      <TradeHistorySection customerId={c.id} result={trades} />
     </main>
   );
 }
