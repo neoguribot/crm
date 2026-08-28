@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
+import { APP_NAME, HOME_PATH, NAV_ITEMS } from "@/lib/constants";
 
 /** 네비게이션을 숨기는 경로 (홈·로그인 등). */
 const HIDDEN_PREFIXES = ["/login", "/logout"];
@@ -23,7 +23,7 @@ export function AppNav() {
         aria-label="주 메뉴"
         className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3"
       >
-        <Link href="/pipeline" className="mr-2 font-semibold">
+        <Link href={HOME_PATH} className="mr-2 font-semibold">
           {APP_NAME}
         </Link>
 
