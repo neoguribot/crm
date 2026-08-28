@@ -6,13 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME } from "@/lib/constants";
 import { requireUser } from "@/lib/supabase/require-user";
 import { createCustomer } from "@/app/customers/actions";
 import { CustomerForm } from "@/app/customers/customer-form";
 
 export const metadata: Metadata = {
-  title: `신규 고객 등록 · ${APP_NAME}`,
+  title: "신규 고객 등록",
 };
 
 export default async function NewCustomerPage() {

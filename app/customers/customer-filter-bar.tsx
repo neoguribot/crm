@@ -23,6 +23,23 @@ import {
 
 const ALL = "ALL";
 
+const PURPOSE_ITEMS: Record<string, string> = {
+  [ALL]: "전체",
+  ...Object.fromEntries(
+    PURCHASE_PURPOSES.map((c) => [c, PURCHASE_PURPOSE_LABELS[c]]),
+  ),
+};
+const CHANNEL_ITEMS: Record<string, string> = {
+  [ALL]: "전체",
+  ...Object.fromEntries(
+    INFLOW_CHANNELS.map((c) => [c, INFLOW_CHANNEL_LABELS[c]]),
+  ),
+};
+const INACTIVE_ITEMS: Record<string, string> = {
+  [ALL]: "전체",
+  ...Object.fromEntries(INACTIVE_DAY_OPTIONS.map((d) => [String(d), `${d}일 이상`])),
+};
+
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
   const qId = useId();
@@ -69,7 +86,11 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label>구매목적</Label>
-          <Select name="purpose" defaultValue={filters.purpose ?? ALL}>
+          <Select
+            name="purpose"
+            items={PURPOSE_ITEMS}
+            defaultValue={filters.purpose ?? ALL}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -86,7 +107,11 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
 
         <div className="flex flex-col gap-1.5">
           <Label>유입경로</Label>
-          <Select name="channel" defaultValue={filters.channel ?? ALL}>
+          <Select
+            name="channel"
+            items={CHANNEL_ITEMS}
+            defaultValue={filters.channel ?? ALL}
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -105,6 +130,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
           <Label>미방문 기간</Label>
           <Select
             name="inactiveDays"
+            items={INACTIVE_ITEMS}
             defaultValue={
               filters.inactiveDays ? String(filters.inactiveDays) : ALL
             }

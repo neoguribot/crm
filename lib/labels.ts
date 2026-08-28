@@ -4,6 +4,7 @@
  */
 
 import type {
+  CustomerStage,
   InflowChannel,
   ItemType,
   PurchasePurpose,
@@ -38,4 +39,12 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   GOLD_14K: "14K",
   SILVER: "은",
   OTHER: "기타",
+};
+
+export const CUSTOMER_STAGE_LABELS: Record<CustomerStage, string> = {
+  NEW_INQUIRY: "신규 문의",
+  CONSULTING: "상담 중",
+  QUOTE_SENT: "견적 발송",
+  PURCHASE_CONFIRMED: "구매 확정",
+  AFTER_CARE: "사후 관리",
 };

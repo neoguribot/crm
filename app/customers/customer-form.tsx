@@ -115,7 +115,11 @@ export function CustomerForm({
         <Label>
           유입경로 <span className="text-destructive">*</span>
         </Label>
-        <Select name="inflow_channel" defaultValue={channelDefault || undefined}>
+        <Select
+          name="inflow_channel"
+          items={INFLOW_CHANNEL_LABELS}
+          defaultValue={channelDefault || undefined}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="선택해 주세요" />
           </SelectTrigger>
@@ -155,6 +159,7 @@ export function CustomerForm({
               <Checkbox
                 name="purchase_purposes"
                 value={code}
+                aria-label={PURCHASE_PURPOSE_LABELS[code]}
                 defaultChecked={checkedPurposes.has(code)}
               />
               {PURCHASE_PURPOSE_LABELS[code]}

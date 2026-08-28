@@ -7,14 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME } from "@/lib/constants";
 import { getCustomerById } from "@/lib/customers/queries";
 import { requireUser } from "@/lib/supabase/require-user";
 import { createTradeRecord } from "@/app/customers/[id]/trades/actions";
 import { TradeForm } from "@/app/customers/[id]/trades/trade-form";
 
 export const metadata: Metadata = {
-  title: `거래 등록 · ${APP_NAME}`,
+  title: "거래 등록",
 };
 
 export default async function NewTradePage({

@@ -2,12 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient } from "@supabase/ssr";
 
+import { HOME_PATH } from "@/lib/constants";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 /** 로그인이 필요한 경로 (접두어 일치) */
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/customers",
+  "/pipeline",
   "/trades",
   "/segments",
   "/reminders",
@@ -25,7 +27,7 @@ function isProtectedPath(pathname: string): boolean {
  *
  * - 세션 쿠키를 새로 고쳐 만료를 방지한다.
  * - 비로그인 사용자가 보호 경로에 접근하면 /login 으로 보낸다.
- * - 로그인 사용자가 /login 에 접근하면 /dashboard 로 보낸다.
+ * - 로그인 사용자가 /login 에 접근하면 파이프라인(HOME_PATH)으로 보낸다.
  * - 실제 인증 검증은 각 서버 컴포넌트에서 supabase.auth.getUser() 로 다시 확인한다.
  */
 export async function updateSession(request: NextRequest) {
@@ -66,7 +68,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === "/login") {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    redirectUrl.pathname = HOME_PATH;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

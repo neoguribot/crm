@@ -11,6 +11,8 @@ import {
 } from "@/lib/validation/customer";
 import type { CustomerFormState } from "@/app/customers/form-state";
 
+const DELETE_ERROR =
+  "삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 const GENERIC_ERROR =
   "저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 
@@ -133,4 +135,50 @@ export async function updateCustomer(
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
   redirect(`/customers/${id}`);
+}
+
+export type DeleteCustomerState = { error: string | null };
+
+/**
+ * 고객 삭제. 자기 고객이면 거래 기록이 있어도 삭제할 수 있다.
+ * - 서버에서 인증 사용자 확인 → 삭제.
+ * - 이 고객의 거래 기록은 DB FK(ON DELETE CASCADE)로 함께 삭제된다.
+ * - RLS(customers_delete_own)가 owner 불일치를 막는다.
+ * - 성공 시 /customers 로 이동한다.
+ */
+export async function deleteCustomer(
+  customerId: string,
+  _prev: DeleteCustomerState,
+  _formData: FormData,
+): Promise<DeleteCustomerState> {
+  const supabase = await createServerSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data, error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", customerId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[customers] 삭제 실패:", error.message);
+    return { error: DELETE_ERROR };
+  }
+  if (!data) {
+    // 이미 없거나 권한이 없는 고객(RLS) 또는 DELETE 정책 미적용
+    return {
+      error:
+        "고객을 삭제하지 못했습니다. 이미 삭제되었거나 권한이 없을 수 있습니다.",
+    };
+  }
+
+  revalidatePath("/customers");
+  redirect("/customers");
 }

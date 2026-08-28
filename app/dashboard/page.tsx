@@ -2,23 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME } from "@/lib/constants";
-import { currentMonthLabelInSeoul, todayInSeoul } from "@/lib/date";
+import {
+  currentMonthLabelInSeoul,
+  formatKoreanDate,
+  todayInSeoul,
+} from "@/lib/date";
 import { getDashboardSummary } from "@/lib/dashboard/queries";
-import { ITEM_TYPE_LABELS, PURCHASE_PURPOSE_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
+import {
+  ITEM_TYPE_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  TRADE_TYPE_LABELS,
+} from "@/lib/labels";
 import { formatWon } from "@/lib/number";
 import { PURCHASE_PURPOSES } from "@/lib/types/database";
 import { requireUser } from "@/lib/supabase/require-user";
 
 export const metadata: Metadata = {
-  title: `대시보드 · ${APP_NAME}`,
+  title: "대시보드",
 };
 
 // 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
@@ -70,23 +76,11 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">CRM 현황</h1>
-          <p className="text-sm text-muted-foreground">
-            기준일 {todayInSeoul()} (Asia/Seoul)
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" render={<Link href="/customers" />}>
-            고객 목록
-          </Button>
-          <form action="/logout" method="post">
-            <Button type="submit" variant="ghost">
-              로그아웃
-            </Button>
-          </form>
-        </div>
+      <div>
+        <h1 className="text-xl font-semibold">CRM 현황</h1>
+        <p className="text-sm text-muted-foreground">
+          기준일 {formatKoreanDate(todayInSeoul())} · 시간대 Asia/Seoul
+        </p>
       </div>
 
       {!result.ok ? (
@@ -119,11 +113,18 @@ export default async function DashboardPage() {
             <StatCard
               label="30일 이내 이벤트 예정"
               value={`${result.data.upcomingEventCount.toLocaleString("ko-KR")}명`}
-              sub="다음 이벤트 예정일 기준"
+              href="/reminders?status=ALL_UPCOMING"
+              sub="리마인드 화면에서 확인"
             />
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-2">
+          <section
+            aria-labelledby="dash-detail"
+            className="grid gap-6 lg:grid-cols-2"
+          >
+            <h2 id="dash-detail" className="sr-only">
+              구매목적별 고객 수와 최근 거래
+            </h2>
             <Card>
               <CardHeader>
                 <CardTitle>구매목적별 고객 수</CardTitle>
@@ -189,7 +190,7 @@ export default async function DashboardPage() {
                             {formatWon(t.amount)}
                           </span>
                           <span className="tabular-nums text-muted-foreground">
-                            {t.trade_date}
+                            {formatKoreanDate(t.trade_date)}
                           </span>
                         </div>
                       </li>

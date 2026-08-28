@@ -26,7 +26,7 @@ export function trimTrailingZeros(value: string): string {
   return value.replace(/\.?0+$/, "");
 }
 
-/** 원화 금액 표시: 천 단위 구분, 소수점 없음(DB 가 numeric(15,0)). */
+/** 원화 금액 표시: 천 단위 구분, 소수점 없음(DB 가 numeric(15,0)). 예: "350000" → "350,000원" */
 export function formatWon(value: string): string {
   const [intPart] = value.split(".");
   const sign = intPart.startsWith("-") ? "-" : "";

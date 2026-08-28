@@ -16,6 +16,10 @@ const LIST_COLUMNS =
 
 /** 상세/수정에 필요한 컬럼. */
 const DETAIL_COLUMNS =
+  "id, name, phone, inflow_channel, stage, purchase_purposes, first_visit_date, last_contact_date, next_event_date, memo, created_at, updated_at";
+
+/** stage 컬럼(마이그레이션 0004) 이 아직 없는 DB 를 위한 폴백. */
+const DETAIL_COLUMNS_NO_STAGE =
   "id, name, phone, inflow_channel, purchase_purposes, first_visit_date, last_contact_date, next_event_date, memo, created_at, updated_at";
 
 export type CustomerDetail = Pick<
@@ -31,6 +35,17 @@ export type CustomerDetail = Pick<
   | "memo"
   | "created_at"
   | "updated_at"
+> & {
+  /** 0004 미적용 DB 에서는 null. */
+  stage: Customer["stage"] | null;
+};
+
+/** 파이프라인 보드 카드에 필요한 컬럼. */
+const PIPELINE_COLUMNS = "id, name, phone, stage, next_event_date, updated_at";
+
+export type PipelineCustomer = Pick<
+  Customer,
+  "id" | "name" | "phone" | "stage" | "next_event_date" | "updated_at"
 >;
 
 /** 목록 행: 저장 컬럼 + 계산된 최근 방문일·미방문 일수. */
@@ -139,11 +154,22 @@ export async function getCustomerById(
 ): Promise<QueryResult<CustomerDetail | null>> {
   const supabase = await createServerSupabaseClient();
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("customers")
     .select(DETAIL_COLUMNS)
     .eq("id", id)
     .maybeSingle();
+
+  // stage 컬럼(0004) 미적용 DB 폴백
+  if (error?.code === "42703") {
+    const fallback = await supabase
+      .from("customers")
+      .select(DETAIL_COLUMNS_NO_STAGE)
+      .eq("id", id)
+      .maybeSingle();
+    data = fallback.data ? { ...fallback.data, stage: null } : null;
+    error = fallback.error;
+  }
 
   if (error) {
     console.error("[customers] 상세 조회 실패:", error.message);
@@ -154,4 +180,36 @@ export async function getCustomerById(
   }
 
   return { ok: true, data: (data as CustomerDetail | null) ?? null };
+}
+
+/**
+ * 파이프라인 보드용 — 로그인 사용자의 모든 고객 (단계별 그룹은 호출 측에서).
+ * 최근 이동/수정 순으로 정렬(updated_at desc) → 컬럼 안에서 최근 카드가 위로.
+ */
+export async function getPipelineCustomers(): Promise<
+  QueryResult<PipelineCustomer[]>
+> {
+  const supabase = await createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select(PIPELINE_COLUMNS)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("[customers] 파이프라인 조회 실패:", error.message);
+    if (error.code === "42703") {
+      return {
+        ok: false,
+        error:
+          "파이프라인 기능을 쓰려면 데이터베이스 마이그레이션(0004)이 필요합니다. supabase/migrations 를 확인하세요.",
+      };
+    }
+    return {
+      ok: false,
+      error: "파이프라인을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  return { ok: true, data: (data ?? []) as unknown as PipelineCustomer[] };
 }

@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { HOME_PATH } from "@/lib/constants";
 import { authErrorMessage } from "@/lib/supabase/auth-errors";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type LoginState = { error: string | null };
 
 /**
- * 이메일·비밀번호 로그인. 성공하면 /dashboard 로 이동한다.
+ * 이메일·비밀번호 로그인. 성공하면 기본 화면(파이프라인)으로 이동한다.
  * 회원가입·비밀번호 재설정은 이 단계에서 구현하지 않는다.
  */
 export async function signInWithPassword(
@@ -31,5 +32,5 @@ export async function signInWithPassword(
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(HOME_PATH);
 }

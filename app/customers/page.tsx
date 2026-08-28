@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME } from "@/lib/constants";
+import { formatKoreanDate } from "@/lib/date";
 import { searchCustomers } from "@/lib/customers/queries";
 import {
   hasActiveFilters,
@@ -18,9 +18,10 @@ import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/require-user";
 import { AppliedFilters } from "@/app/customers/applied-filters";
 import { CustomerFilterBar } from "@/app/customers/customer-filter-bar";
+import { DeleteCustomerButton } from "@/app/customers/delete-customer-button";
 
 export const metadata: Metadata = {
-  title: `고객 목록 · ${APP_NAME}`,
+  title: "고객 목록",
 };
 
 export default async function CustomersPage({
@@ -85,20 +86,22 @@ export default async function CustomersPage({
           <ul className="flex flex-col gap-3">
             {result.data.map((customer) => (
               <li key={customer.id}>
-                <Link
-                  href={`/customers/${customer.id}`}
-                  className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <Card className="transition-colors hover:bg-muted/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{customer.name}</span>
-                        <span className="text-sm font-normal text-muted-foreground">
-                          {customer.phone}
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+                      <Link
+                        href={`/customers/${customer.id}`}
+                        className="rounded outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        {customer.name}
+                      </Link>
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {customer.phone}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-3">
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
                       <span>
                         유입경로:{" "}
                         {INFLOW_CHANNEL_LABELS[customer.inflow_channel]}
@@ -111,11 +114,26 @@ export default async function CustomersPage({
                               .join(", ")
                           : "없음"}
                       </span>
-                      <span>최근 방문일: {customer.last_visit_date}</span>
+                      <span>
+                        최근 방문일: {formatKoreanDate(customer.last_visit_date)}
+                      </span>
                       <span>미방문 {customer.inactive_days}일</span>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        render={<Link href={`/customers/${customer.id}`} />}
+                      >
+                        상세
+                      </Button>
+                      <DeleteCustomerButton
+                        customerId={customer.id}
+                        customerName={customer.name}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ul>

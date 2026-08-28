@@ -62,7 +62,11 @@ export function TradeForm({
         <Label>
           거래구분 <span className="text-destructive">*</span>
         </Label>
-        <Select name="trade_type" defaultValue={v?.trade_type || undefined}>
+        <Select
+          name="trade_type"
+          items={TRADE_TYPE_LABELS}
+          defaultValue={v?.trade_type || undefined}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="선택해 주세요" />
           </SelectTrigger>
@@ -81,7 +85,11 @@ export function TradeForm({
         <Label>
           품목 <span className="text-destructive">*</span>
         </Label>
-        <Select name="item_type" defaultValue={v?.item_type || undefined}>
+        <Select
+          name="item_type"
+          items={ITEM_TYPE_LABELS}
+          defaultValue={v?.item_type || undefined}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="선택해 주세요" />
           </SelectTrigger>
