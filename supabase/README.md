@@ -26,8 +26,11 @@ Project Settings > API 에서 확인한다.
 ### 방법 A — SQL Editor (권장, 프로젝트만 있으면 됨)
 
 1. Supabase 대시보드 > SQL Editor
-2. `migrations/0001_initial_schema.sql` 전체를 붙여넣고 실행
-3. 이 스크립트는 여러 번 실행해도 안전하다(이미 있는 객체는 건너뜀).
+2. `migrations/` 의 파일을 **번호 순서대로** 붙여넣고 실행한다.
+   - `0001_initial_schema.sql` — 테이블·enum·인덱스·트리거·RLS
+   - `0002_dashboard_summary.sql` — 대시보드 요약 RPC(`dashboard_summary()`)
+3. 각 스크립트는 `create or replace` 라 여러 번 실행해도 안전하다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0003_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 

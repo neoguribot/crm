@@ -13,6 +13,12 @@ export function todayInSeoul(): string {
   }).format(new Date());
 }
 
+/** 오늘(Asia/Seoul)의 연·월 라벨. 예: "2026년 8월" */
+export function currentMonthLabelInSeoul(): string {
+  const [year, month] = todayInSeoul().split("-");
+  return `${year}년 ${Number(month)}월`;
+}
+
 /** `YYYY-MM-DD` 가 실제 존재하는 날짜인지 확인한다. */
 export function isValidIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
