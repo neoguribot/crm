@@ -21,7 +21,7 @@ export const INFLOW_CHANNEL_LABELS: Record<InflowChannel, string> = {
 export const PURCHASE_PURPOSE_LABELS: Record<PurchasePurpose, string> = {
   WEDDING: "예물",
   FIRST_BIRTHDAY: "돌반지",
-  INVESTMENT: "투자",
+  INVESTMENT: "투자·골드바",
   SELLING: "매입",
   OTHER: "기타",
 };
