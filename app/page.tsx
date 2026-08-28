@@ -33,7 +33,7 @@ export default async function Home() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            로그인 후 홈·파이프라인·대시보드·고객관리·리마인드를 이용할 수 있습니다.
+            로그인 후 파이프라인·대시보드·고객관리·리마인드를 이용할 수 있습니다.
           </p>
           <Link href="/login" className={buttonVariants({ className: "self-start" })}>
             로그인

@@ -11,7 +11,6 @@ export const APP_DESCRIPTION =
  * - 세그먼트(검색·구매목적·유입경로·미방문 필터)는 "고객관리" 화면 상단에 있다.
  */
 export const NAV_ITEMS = [
-  { href: "/home", label: "홈" },
   { href: "/pipeline", label: "파이프라인" },
   { href: "/dashboard", label: "대시보드" },
   { href: "/customers", label: "고객관리" },
@@ -19,4 +18,4 @@ export const NAV_ITEMS = [
 ] as const;
 
 /** 로그인 후 기본으로 보여줄 화면. */
-export const HOME_PATH = "/home";
+export const HOME_PATH = "/pipeline";
