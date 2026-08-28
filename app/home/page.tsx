@@ -26,18 +26,20 @@ export const metadata: Metadata = {
 // 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
 export const dynamic = "force-dynamic";
 
-/** 홈에서 안내할 다른 화면 (홈 자신은 제외). */
+/** 홈에서 안내할 화면 (네비게이션 항목과 동일). */
 const QUICK_LINKS: { href: string; label: string; description: string }[] =
-  NAV_ITEMS.filter((item) => item.href !== "/home").map((item) => ({
+  NAV_ITEMS.map((item) => ({
     href: item.href,
     label: item.label,
     description:
-      {
-        "/pipeline": "영업 단계별 고객 보드",
-        "/dashboard": "매출·고객 현황 요약",
-        "/customers": "고객 등록·검색·세그먼트",
-        "/reminders": "이벤트 리마인드 대상",
-      }[item.href] ?? "",
+      (
+        {
+          "/pipeline": "영업 단계별 고객 보드",
+          "/dashboard": "매출·고객 현황 요약",
+          "/customers": "고객 등록·검색·세그먼트",
+          "/reminders": "이벤트 리마인드 대상",
+        } as Record<string, string>
+      )[item.href] ?? "",
   }));
 
 function StatCard({

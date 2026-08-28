@@ -23,7 +23,11 @@ export function AppNav() {
         aria-label="주 메뉴"
         className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3"
       >
-        <Link href={HOME_PATH} className="mr-2 font-semibold">
+        <Link
+          href={HOME_PATH}
+          aria-current={pathname === HOME_PATH ? "page" : undefined}
+          className="mr-2 font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           {APP_NAME}
         </Link>
 
