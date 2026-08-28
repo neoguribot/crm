@@ -44,7 +44,32 @@ cp .env.example .env.local
 [`supabase/README.md`](./supabase/README.md) 에 정리했다.
 
 - `supabase/migrations/0001_initial_schema.sql` — 테이블·enum·인덱스·트리거·RLS
-- Supabase 대시보드 SQL Editor 에 붙여넣어 적용한다(아직 미적용).
+- Supabase 대시보드 SQL Editor 에 붙여넣어 적용한다. **(적용 완료됨)**
+
+## 인증 (Supabase Auth)
+
+이메일·비밀번호 로그인만 사용한다. 회원가입·비밀번호 재설정은 아직 구현하지 않았다.
+
+- `proxy.ts` (Next.js 16, 구 `middleware.ts`) 가 매 요청 세션을 갱신하고
+  보호 경로 접근을 통제한다.
+- 각 보호 페이지는 서버에서 `supabase.auth.getUser()` 로 인증을 다시 확인한다.
+- 로그인 성공 → `/dashboard`, 로그아웃 → `/login`, 미인증 보호 경로 → `/login`.
+- 로그인 상태로 `/login` 접근 시 `/dashboard` 로 보낸다.
+
+### 공개 회원가입 정책 (대시보드에서 확인)
+
+Supabase 대시보드 > Authentication > Sign In / Providers 에서
+**"Allow new users to sign up"** 를 **끄는 것**을 권장한다(매장 직원만 사용).
+
+### 테스트 사용자 만들기
+
+앱에 회원가입 화면이 없으므로 대시보드에서 직접 만든다.
+
+1. Supabase 대시보드 > Authentication > Users > **Add user** > **Create new user**
+2. 이메일·비밀번호 입력, **Auto Confirm User** 체크(이메일 인증 생략)
+3. 이 계정으로 `/login` 에서 로그인 → `/dashboard` 접근 확인
+
+> 사용자별 데이터 분리(`owner_id`)라서, 로그인한 사용자마다 자기 고객·거래만 보인다.
 
 ## 실행
 

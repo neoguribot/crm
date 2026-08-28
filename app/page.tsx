@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,10 +18,16 @@ export default function Home() {
           <CardTitle className="text-xl">{APP_NAME}</CardTitle>
           <CardDescription>{APP_DESCRIPTION}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            현재 상태: 프로젝트 초기 설정 완료
+            현재 상태: 인증 연동 완료
           </p>
+          <Link
+            href="/dashboard"
+            className={buttonVariants({ className: "self-start" })}
+          >
+            대시보드로 이동
+          </Link>
         </CardContent>
       </Card>
 
