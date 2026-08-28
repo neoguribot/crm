@@ -30,6 +30,24 @@ export function formatKoreanDate(iso: string | null | undefined): string {
   return `${y}. ${Number(m)}. ${Number(d)}.`;
 }
 
+/**
+ * timestamptz(ISO 문자열)를 Asia/Seoul 기준 순수 날짜(`YYYY-MM-DD`)로.
+ * 값이 없거나 파싱 불가면 빈 문자열.
+ */
+export function isoTimestampToSeoulDate(
+  iso: string | null | undefined,
+): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: KST_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 /** `YYYY-MM-DD` 가 실제 존재하는 날짜인지 확인한다. */
 export function isValidIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
