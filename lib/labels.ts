@@ -41,9 +41,9 @@ export const ITEM_TYPE_LABELS: Record<ItemType, string> = {
   GOLD_18K: "18K",
   GOLD_14K: "14K",
   SILVER_JEWELRY: "은제품(은주얼리)",
-  OTHER: "기타",
   SILVER_SPOON: "은제품(은수저)",
   SCRAP_GOLD: "치금",
+  OTHER: "기타",
 };
 
 /** 코드값 → 표시명. 알 수 없는 값이면 코드값을 그대로 돌려준다(옛 데이터 방어). */

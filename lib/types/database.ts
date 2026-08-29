@@ -46,9 +46,9 @@ export const ITEM_TYPES = [
   "GOLD_18K",
   "GOLD_14K",
   "SILVER_JEWELRY",
-  "OTHER",
   "SILVER_SPOON",
   "SCRAP_GOLD",
+  "OTHER",
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
