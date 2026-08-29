@@ -39,14 +39,6 @@ describe("parseCustomerFilters", () => {
     expect(parseCustomerFilters({ channel: "hack" }).channel).toBeNull();
   });
 
-  it("inactiveDays 는 30/90/180/365 만", () => {
-    expect(parseCustomerFilters({ inactiveDays: "90" }).inactiveDays).toBe(90);
-    expect(parseCustomerFilters({ inactiveDays: "45" }).inactiveDays).toBeNull();
-    expect(parseCustomerFilters({ inactiveDays: "-30" }).inactiveDays).toBeNull();
-    expect(parseCustomerFilters({ inactiveDays: "abc" }).inactiveDays).toBeNull();
-    expect(parseCustomerFilters({ inactiveDays: "" }).inactiveDays).toBeNull();
-  });
-
   it("방문일 구간: 유효한 날짜만 수용", () => {
     const p = parseCustomerFilters({
       visitFrom: "2026-08-01",
@@ -89,13 +81,11 @@ describe("buildCustomerSearchParams", () => {
       filters({
         q: "김",
         purpose: "FIRST_BIRTHDAY",
-        inactiveDays: 90,
         visitFrom: "2026-08-01",
       }),
     );
     expect(qs.get("q")).toBe("김");
     expect(qs.get("purpose")).toBe("FIRST_BIRTHDAY");
-    expect(qs.get("inactiveDays")).toBe("90");
     expect(qs.get("visitFrom")).toBe("2026-08-01");
     expect(qs.has("channel")).toBe(false);
     expect(qs.has("visitTo")).toBe(false);

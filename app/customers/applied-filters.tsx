@@ -36,13 +36,6 @@ export function AppliedFilters({ filters }: { filters: CustomerFilters }) {
       next: { ...filters, channel: null },
     });
   }
-  if (filters.inactiveDays) {
-    chips.push({
-      key: "inactiveDays",
-      label: `미방문 ${filters.inactiveDays}일 이상`,
-      next: { ...filters, inactiveDays: null },
-    });
-  }
   if (filters.visitFrom || filters.visitTo) {
     const range = `${filters.visitFrom ?? "처음"} ~ ${filters.visitTo ?? "오늘"}`;
     chips.push({

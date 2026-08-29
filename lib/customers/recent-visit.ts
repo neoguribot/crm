@@ -1,5 +1,5 @@
 /**
- * 최근 방문일과 미방문 일수 계산 (순수 함수).
+ * 최근 방문일·방문 구간 계산 (순수 함수).
  *
  * - 최근 방문일 = 거래가 있으면 가장 최근 trade_date, 없으면 first_visit_date
  * - 모든 입력은 `YYYY-MM-DD` 문자열(date 컬럼). timestamptz 는 다루지 않는다.
@@ -25,14 +25,6 @@ export function resolveLastVisitDate(
     if (d > latest) latest = d;
   }
   return latest;
-}
-
-/**
- * 미방문 일수. 최근 방문일이 미래면(잘못된 데이터) 음수 대신 0 으로 처리한다.
- */
-export function inactiveDaysSince(lastVisitDate: string, todayIso: string): number {
-  const diff = daysBetweenIsoDates(lastVisitDate, todayIso);
-  return diff < 0 ? 0 : diff;
 }
 
 /**

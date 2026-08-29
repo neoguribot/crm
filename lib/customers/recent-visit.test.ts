@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   daysBetweenIsoDates,
-  inactiveDaysSince,
   resolveLastVisitDate,
   visitedWithin,
 } from "@/lib/customers/recent-visit";
@@ -41,20 +40,6 @@ describe("resolveLastVisitDate", () => {
     expect(
       resolveLastVisitDate("2026-05-01", ["2026-01-01", "2026-02-01"]),
     ).toBe("2026-05-01");
-  });
-});
-
-describe("inactiveDaysSince", () => {
-  it("정확히 30일 전이면 30", () => {
-    expect(inactiveDaysSince("2026-01-01", "2026-01-31")).toBe(30);
-  });
-
-  it("최근 방문일이 미래면 음수 대신 0", () => {
-    expect(inactiveDaysSince("2999-01-01", "2026-03-01")).toBe(0);
-  });
-
-  it("오늘 방문했으면 0", () => {
-    expect(inactiveDaysSince("2026-03-01", "2026-03-01")).toBe(0);
   });
 });
 

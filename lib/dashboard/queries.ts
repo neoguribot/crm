@@ -8,6 +8,7 @@ import {
 } from "@/lib/dashboard/summary";
 import {
   normalizePeriodRows,
+  type PeriodBasis,
   type PeriodGranularity,
   type PeriodPoint,
 } from "@/lib/dashboard/period";
@@ -37,18 +38,21 @@ export async function getDashboardSummary(): Promise<
 }
 
 /**
- * 기간별(일간/주간/월간/연간) 고객수.
- * - "고객수" 는 거래 1건 = 1명 (거래 건수). distinct 고객이 아니다.
+ * 기간별(일간/주간/월간/연간) 추이.
+ * - basis "trade": 거래 1건 = 1명 (거래 건수). distinct 고객이 아니다.
+ * - basis "registration": 신규 등록 고객수 (customers.created_at 기준).
  * - 집계는 customer_count_by_period() RPC(PostgreSQL)에서 수행한다.
  * - 마이그레이션 0005 미적용 DB 는 안내 문구를 반환한다.
  */
 export async function getCustomerCountByPeriod(
   granularity: PeriodGranularity,
+  basis: PeriodBasis = "trade",
 ): Promise<QueryResult<PeriodPoint[]>> {
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase.rpc("customer_count_by_period", {
     granularity,
+    basis,
   });
 
   if (error) {

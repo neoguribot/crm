@@ -16,7 +16,6 @@ import {
 import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
 import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
 import {
-  INACTIVE_DAY_OPTIONS,
   SEARCH_MAX_LENGTH,
   type CustomerFilters,
 } from "@/lib/customers/filters";
@@ -35,11 +34,6 @@ const CHANNEL_ITEMS: Record<string, string> = {
     INFLOW_CHANNELS.map((c) => [c, INFLOW_CHANNEL_LABELS[c]]),
   ),
 };
-const INACTIVE_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(INACTIVE_DAY_OPTIONS.map((d) => [String(d), `${d}일 이상`])),
-};
-
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
   const qId = useId();
@@ -59,11 +53,6 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
 
     const channel = String(form.get("channel") ?? "");
     if (channel && channel !== ALL) params.set("channel", channel);
-
-    const inactiveDays = String(form.get("inactiveDays") ?? "");
-    if (inactiveDays && inactiveDays !== ALL) {
-      params.set("inactiveDays", inactiveDays);
-    }
 
     let visitFrom = String(form.get("visitFrom") ?? "").trim();
     let visitTo = String(form.get("visitTo") ?? "").trim();
@@ -93,7 +82,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>구매목적</Label>
           <Select
@@ -136,28 +125,6 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>미방문 기간</Label>
-          <Select
-            name="inactiveDays"
-            items={INACTIVE_ITEMS}
-            defaultValue={
-              filters.inactiveDays ? String(filters.inactiveDays) : ALL
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {INACTIVE_DAY_OPTIONS.map((d) => (
-                <SelectItem key={d} value={String(d)}>
-                  {d}일 이상
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <fieldset className="flex flex-col gap-1.5">

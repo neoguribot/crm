@@ -23,6 +23,15 @@ export function periodHref(granularity: PeriodGranularity): string {
   return granularity === "day" ? "/dashboard" : `/dashboard?period=${granularity}`;
 }
 
+/** 집계 기준: 거래 건수 / 신규 등록 고객수. */
+export const PERIOD_BASES = ["trade", "registration"] as const;
+export type PeriodBasis = (typeof PERIOD_BASES)[number];
+
+export const PERIOD_BASIS_LABELS: Record<PeriodBasis, string> = {
+  trade: "거래",
+  registration: "신규 등록",
+};
+
 export type PeriodPoint = {
   /** 버킷 시작일 `YYYY-MM-DD` */
   bucket: string;

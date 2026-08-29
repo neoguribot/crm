@@ -21,7 +21,6 @@ export type DashboardSummary = {
   monthSaleAmount: string;
   monthPurchaseAmount: string;
   purposeCounts: Record<PurchasePurpose, number>;
-  inactive90Count: number;
   upcomingEventCount: number;
   recentTrades: RecentTrade[];
 };
@@ -91,7 +90,6 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
     monthSaleAmount: toAmountString(r.month_sale_amount),
     monthPurchaseAmount: toAmountString(r.month_purchase_amount),
     purposeCounts,
-    inactive90Count: toCount(r.inactive_90_count),
     upcomingEventCount: toCount(r.upcoming_event_count),
     recentTrades,
   };

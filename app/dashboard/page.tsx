@@ -85,9 +85,13 @@ function StatCard({
 function PeriodChart({
   granularity,
   points,
+  caption,
+  emptyText,
 }: {
   granularity: PeriodGranularity;
   points: PeriodPoint[];
+  caption: string;
+  emptyText: string;
 }) {
   const max = points.reduce((m, p) => Math.max(m, p.count), 0);
   const total = points.reduce((s, p) => s + p.count, 0);
@@ -95,7 +99,7 @@ function PeriodChart({
   if (points.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        표시할 거래가 없습니다.
+        {emptyText}
       </p>
     );
   }
@@ -128,8 +132,7 @@ function PeriodChart({
         })}
       </ul>
       <p className="mt-3 text-xs text-muted-foreground">
-        최근 {points.length}개 구간 합계 {total.toLocaleString("ko-KR")}명 · 거래
-        1건을 고객 1명으로 셉니다(같은 고객의 반복 거래도 중복 집계).
+        최근 {points.length}개 구간 합계 {total.toLocaleString("ko-KR")}건 · {caption}
       </p>
     </>
   );
@@ -147,9 +150,10 @@ export default async function DashboardPage({
     Array.isArray(sp.period) ? sp.period[0] : sp.period,
   );
 
-  const [result, periodResult] = await Promise.all([
+  const [result, tradePeriod, registrationPeriod] = await Promise.all([
     getDashboardSummary(),
-    getCustomerCountByPeriod(granularity),
+    getCustomerCountByPeriod(granularity, "trade"),
+    getCustomerCountByPeriod(granularity, "registration"),
   ]);
   const monthLabel = currentMonthLabelInSeoul();
 
@@ -185,11 +189,6 @@ export default async function DashboardPage({
               value={formatWon(result.data.monthPurchaseAmount)}
             />
             <StatCard
-              label="90일 이상 미방문"
-              value={`${result.data.inactive90Count.toLocaleString("ko-KR")}명`}
-              href="/customers?inactiveDays=90"
-            />
-            <StatCard
               label="30일 이내 이벤트 예정"
               value={`${result.data.upcomingEventCount.toLocaleString("ko-KR")}명`}
               href="/reminders?status=ALL_UPCOMING"
@@ -199,7 +198,7 @@ export default async function DashboardPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>기간별 고객수</CardTitle>
+              <CardTitle>기간별 추이</CardTitle>
               <CardAction>
                 <div
                   role="group"
@@ -224,17 +223,48 @@ export default async function DashboardPage({
                 </div>
               </CardAction>
             </CardHeader>
-            <CardContent>
-              {!periodResult.ok ? (
-                <p className="py-6 text-center text-sm text-destructive">
-                  {periodResult.error}
-                </p>
-              ) : (
-                <PeriodChart
-                  granularity={granularity}
-                  points={periodResult.data}
-                />
-              )}
+            <CardContent className="flex flex-col gap-6">
+              <div>
+                <h3 className="mb-3 text-sm font-medium">
+                  거래 고객수{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (거래 1건 = 1명)
+                  </span>
+                </h3>
+                {!tradePeriod.ok ? (
+                  <p className="py-4 text-center text-sm text-destructive">
+                    {tradePeriod.error}
+                  </p>
+                ) : (
+                  <PeriodChart
+                    granularity={granularity}
+                    points={tradePeriod.data}
+                    emptyText="표시할 거래가 없습니다."
+                    caption="거래 1건을 1명으로 셉니다(같은 고객의 반복 거래도 중복)."
+                  />
+                )}
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="mb-3 text-sm font-medium">
+                  신규 등록 고객수{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (등록일 기준, 참고용)
+                  </span>
+                </h3>
+                {!registrationPeriod.ok ? (
+                  <p className="py-4 text-center text-sm text-destructive">
+                    {registrationPeriod.error}
+                  </p>
+                ) : (
+                  <PeriodChart
+                    granularity={granularity}
+                    points={registrationPeriod.data}
+                    emptyText="이 구간에 등록된 고객이 없습니다."
+                    caption="고객 등록일(created_at) 기준."
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
 

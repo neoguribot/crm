@@ -117,7 +117,6 @@ export default async function CustomersPage({
                       <span>
                         최근 방문일: {formatKoreanDate(customer.last_visit_date)}
                       </span>
-                      <span>미방문 {customer.inactive_days}일</span>
                     </div>
                     <div className="flex gap-2">
                       <Button
