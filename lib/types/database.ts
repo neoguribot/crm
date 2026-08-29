@@ -12,20 +12,26 @@
 // 선택값 (DB enum 과 동일한 코드 문자열). 한국어 표시명은 lib/labels.ts 에서 분리 관리.
 // ─────────────────────────────────────────────────────────────
 
+/** 유입 경로 (다중 선택). 0008 에서 enum → text[]. */
 export const INFLOW_CHANNELS = [
   "CARROT_MARKET",
   "NAVER_PLACE",
+  "KAKAO_MAP",
+  "KAKAO_CHANNEL",
+  "GOOGLE",
+  "TMAP",
   "REFERRAL",
   "WALK_IN",
   "OTHER",
 ] as const;
 export type InflowChannel = (typeof INFLOW_CHANNELS)[number];
 
+/** 방문 목적 (다중 선택). 0008 에서 enum → text[]. */
 export const PURCHASE_PURPOSES = [
-  "WEDDING",
-  "FIRST_BIRTHDAY",
-  "INVESTMENT",
-  "SELLING",
+  "PURCHASE",
+  "GOLD_BAR",
+  "STONE_PRODUCT",
+  "CUSTOM_JEWELRY",
   "OTHER",
 ] as const;
 export type PurchasePurpose = (typeof PURCHASE_PURPOSES)[number];
@@ -95,10 +101,16 @@ export interface Customer {
   owner_id: string;
   name: string;
   phone: string;
-  inflow_channel: InflowChannel;
-  stage: CustomerStage;
-  first_visit_date: IsoDateString;
+  email: string | null;
+  birth_date: IsoDateString | null;
+  address: string | null;
+  inflow_channels: InflowChannel[];
   purchase_purposes: PurchasePurpose[];
+  stage: CustomerStage;
+  /** 고객 등록일 (기본값 오늘, 수정 가능) */
+  registered_on: IsoDateString;
+  /** 첫 거래일자 (선택) */
+  first_trade_date: IsoDateString | null;
   last_contact_date: IsoDateString | null;
   next_event_date: IsoDateString | null;
   memo: string | null;
@@ -175,9 +187,13 @@ export interface NotificationRow {
 export interface CustomerCreateInput {
   name: string;
   phone: string;
-  inflow_channel: InflowChannel;
-  first_visit_date: IsoDateString;
+  email?: string | null;
+  birth_date?: IsoDateString | null;
+  address?: string | null;
+  inflow_channels: InflowChannel[];
   purchase_purposes: PurchasePurpose[];
+  registered_on: IsoDateString;
+  first_trade_date?: IsoDateString | null;
   last_contact_date?: IsoDateString | null;
   next_event_date?: IsoDateString | null;
   memo?: string | null;

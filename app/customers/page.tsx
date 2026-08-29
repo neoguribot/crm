@@ -103,11 +103,15 @@ export default async function CustomersPage({
                   <CardContent className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
                       <span>
-                        유입경로:{" "}
-                        {INFLOW_CHANNEL_LABELS[customer.inflow_channel]}
+                        유입 경로:{" "}
+                        {customer.inflow_channels.length > 0
+                          ? customer.inflow_channels
+                              .map((ch) => INFLOW_CHANNEL_LABELS[ch])
+                              .join(", ")
+                          : "없음"}
                       </span>
                       <span>
-                        구매목적:{" "}
+                        방문 목적:{" "}
                         {customer.purchase_purposes.length > 0
                           ? customer.purchase_purposes
                               .map((p) => PURCHASE_PURPOSE_LABELS[p])

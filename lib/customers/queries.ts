@@ -9,26 +9,30 @@ import {
   visitedWithin,
 } from "@/lib/customers/recent-visit";
 
+const CUSTOMER_FIELDS =
+  "id, name, phone, email, birth_date, address, inflow_channels, purchase_purposes, registered_on, first_trade_date, last_contact_date, next_event_date, memo, created_at, updated_at";
+
 /** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
-const LIST_COLUMNS =
-  "id, name, phone, inflow_channel, purchase_purposes, first_visit_date, created_at, trade_records(trade_date)";
+const LIST_COLUMNS = `${CUSTOMER_FIELDS}, trade_records(trade_date)`;
 
 /** 상세/수정에 필요한 컬럼. */
-const DETAIL_COLUMNS =
-  "id, name, phone, inflow_channel, stage, purchase_purposes, first_visit_date, last_contact_date, next_event_date, memo, created_at, updated_at";
+const DETAIL_COLUMNS = `${CUSTOMER_FIELDS}, stage`;
 
 /** stage 컬럼(마이그레이션 0004) 이 아직 없는 DB 를 위한 폴백. */
-const DETAIL_COLUMNS_NO_STAGE =
-  "id, name, phone, inflow_channel, purchase_purposes, first_visit_date, last_contact_date, next_event_date, memo, created_at, updated_at";
+const DETAIL_COLUMNS_NO_STAGE = CUSTOMER_FIELDS;
 
 export type CustomerDetail = Pick<
   Customer,
   | "id"
   | "name"
   | "phone"
-  | "inflow_channel"
+  | "email"
+  | "birth_date"
+  | "address"
+  | "inflow_channels"
   | "purchase_purposes"
-  | "first_visit_date"
+  | "registered_on"
+  | "first_trade_date"
   | "last_contact_date"
   | "next_event_date"
   | "memo"
@@ -53,9 +57,10 @@ export type CustomerListItem = Pick<
   | "id"
   | "name"
   | "phone"
-  | "inflow_channel"
+  | "inflow_channels"
   | "purchase_purposes"
-  | "first_visit_date"
+  | "registered_on"
+  | "first_trade_date"
   | "created_at"
 > & {
   last_visit_date: string;
@@ -65,15 +70,26 @@ export type QueryResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
+const MIGRATION_0008_HINT =
+  "고객 항목 개편에는 데이터베이스 마이그레이션(0008)이 필요합니다. supabase/migrations 를 확인하세요.";
+
 type RawListRow = Pick<
   Customer,
   | "id"
   | "name"
   | "phone"
-  | "inflow_channel"
+  | "email"
+  | "birth_date"
+  | "address"
+  | "inflow_channels"
   | "purchase_purposes"
-  | "first_visit_date"
+  | "registered_on"
+  | "first_trade_date"
+  | "last_contact_date"
+  | "next_event_date"
+  | "memo"
   | "created_at"
+  | "updated_at"
 > & { trade_records: { trade_date: string }[] | null };
 
 /**
@@ -98,6 +114,9 @@ export async function searchCustomers(
 
   if (error) {
     console.error("[customers] 목록 조회 실패:", error.message);
+    if (error.code === "42703") {
+      return { ok: false, error: MIGRATION_0008_HINT };
+    }
     return {
       ok: false,
       error: "고객 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -108,19 +127,27 @@ export async function searchCustomers(
 
   const mapped = rows.map((row) => {
     const tradeDates = (row.trade_records ?? []).map((t) => t.trade_date);
-    const lastVisit = resolveLastVisitDate(row.first_visit_date, tradeDates);
+    const lastVisit = resolveLastVisitDate(row.registered_on, [
+      row.first_trade_date,
+      ...tradeDates,
+    ]);
     const item: CustomerListItem = {
       id: row.id,
       name: row.name,
       phone: row.phone,
-      inflow_channel: row.inflow_channel,
+      inflow_channels: row.inflow_channels,
       purchase_purposes: row.purchase_purposes,
-      first_visit_date: row.first_visit_date,
+      registered_on: row.registered_on,
+      first_trade_date: row.first_trade_date,
       created_at: row.created_at,
       last_visit_date: lastVisit,
     };
-    // 방문일 = 최초 방문일 + 모든 거래일
-    const visitDates = [row.first_visit_date, ...tradeDates];
+    // 방문일 = 고객 등록일 + 첫 거래일자 + 모든 거래일
+    const visitDates = [
+      row.registered_on,
+      row.first_trade_date,
+      ...tradeDates,
+    ].filter((d): d is string => Boolean(d));
     return { item, visitDates };
   });
 
@@ -129,7 +156,9 @@ export async function searchCustomers(
       // 이름은 정확히 일치, 연락처는 부분 일치.
       if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
 
-      if (filters.channel && c.inflow_channel !== filters.channel) return false;
+      if (filters.channel && !c.inflow_channels.includes(filters.channel)) {
+        return false;
+      }
 
       if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
         return false;
@@ -177,6 +206,9 @@ export async function getCustomerById(
 
   if (error) {
     console.error("[customers] 상세 조회 실패:", error.message);
+    if (error.code === "42703") {
+      return { ok: false, error: MIGRATION_0008_HINT };
+    }
     return {
       ok: false,
       error: "고객 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",

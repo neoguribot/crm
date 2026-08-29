@@ -85,7 +85,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label>구매목적</Label>
+          <Label>방문 목적</Label>
           <Select
             name="purpose"
             items={PURPOSE_ITEMS}
@@ -106,7 +106,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label>유입경로</Label>
+          <Label>유입 경로</Label>
           <Select
             name="channel"
             items={CHANNEL_ITEMS}
@@ -153,7 +153,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          최초 방문일 또는 거래일이 이 기간 안에 있는 고객을 찾습니다.
+          고객 등록일 또는 거래일이 이 기간 안에 있는 고객을 찾습니다.
         </p>
       </fieldset>
 

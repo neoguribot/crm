@@ -12,20 +12,33 @@ import type {
 } from "@/lib/types/database";
 
 export const INFLOW_CHANNEL_LABELS: Record<InflowChannel, string> = {
-  CARROT_MARKET: "당근마켓",
-  NAVER_PLACE: "네이버플레이스",
-  REFERRAL: "지인추천",
+  CARROT_MARKET: "당근 마켓",
+  NAVER_PLACE: "네이버 플레이스",
+  KAKAO_MAP: "카카오맵",
+  KAKAO_CHANNEL: "카카오채널",
+  GOOGLE: "구글",
+  TMAP: "티맵",
+  REFERRAL: "지인 추천",
   WALK_IN: "워크인",
   OTHER: "기타",
 };
 
+/** 방문 목적 (다중). */
 export const PURCHASE_PURPOSE_LABELS: Record<PurchasePurpose, string> = {
-  WEDDING: "예물",
-  FIRST_BIRTHDAY: "돌반지",
-  INVESTMENT: "투자·골드바",
-  SELLING: "매입",
+  PURCHASE: "매입",
+  GOLD_BAR: "골드바",
+  STONE_PRODUCT: "돌제품",
+  CUSTOM_JEWELRY: "주얼리 맞춤",
   OTHER: "기타",
 };
+
+/** 코드값 → 표시명 (알 수 없으면 코드 그대로). */
+export function inflowChannelLabel(code: string): string {
+  return INFLOW_CHANNEL_LABELS[code as InflowChannel] ?? code;
+}
+export function purchasePurposeLabel(code: string): string {
+  return PURCHASE_PURPOSE_LABELS[code as PurchasePurpose] ?? code;
+}
 
 export const TRADE_TYPE_LABELS: Record<TradeType, string> = {
   SALE: "판매",

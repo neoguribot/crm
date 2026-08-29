@@ -130,7 +130,7 @@ export default async function RemindersPage({
                           연락처: <CopyablePhone phone={c.phone} />
                         </span>
                         <span>
-                          구매목적:{" "}
+                          방문 목적:{" "}
                           {c.purchase_purposes.length > 0
                             ? c.purchase_purposes
                                 .map((p) => PURCHASE_PURPOSE_LABELS[p])

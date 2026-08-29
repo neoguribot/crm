@@ -4,6 +4,8 @@ import { isValidIsoDate, todayInSeoul } from "@/lib/date";
 import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
 
 const MEMO_MAX = 1000;
+const ADDRESS_MAX = 200;
+const EMAIL_MAX = 254;
 
 /** `YYYY-MM-DD` 문자열이며 실제 유효한 날짜. */
 const isoDate = z
@@ -20,6 +22,14 @@ const optionalIsoDate = z
   .refine((v) => v === null || isValidIsoDate(v), {
     message: "올바른 날짜(YYYY-MM-DD)를 입력해 주세요.",
   });
+
+const optionalText = (max: number, label: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, `${label}은(는) ${max}자 이내로 입력해 주세요.`)
+    .transform((v) => (v === "" ? null : v))
+    .nullable();
 
 export const customerInputSchema = z
   .object({
@@ -42,37 +52,44 @@ export const customerInputSchema = z
           .max(20, "연락처는 20자 이내로 입력해 주세요.")
           .regex(/\d/, "연락처에 숫자를 포함해 주세요."),
       ),
-    inflow_channel: z.enum(INFLOW_CHANNELS, {
-      message: "유입경로를 선택해 주세요.",
-    }),
-    first_visit_date: isoDate,
-    purchase_purposes: z.array(z.enum(PURCHASE_PURPOSES)).default([]),
-    last_contact_date: optionalIsoDate,
-    next_event_date: optionalIsoDate,
-    memo: z
+    email: z
       .string()
       .trim()
-      .max(MEMO_MAX, `비고는 ${MEMO_MAX}자 이내로 입력해 주세요.`)
       .transform((v) => (v === "" ? null : v))
-      .nullable(),
+      .nullable()
+      .refine(
+        (v) => v === null || (v.length <= EMAIL_MAX && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
+        "올바른 이메일 주소를 입력해 주세요.",
+      ),
+    birth_date: optionalIsoDate,
+    address: optionalText(ADDRESS_MAX, "주소"),
+    inflow_channels: z
+      .array(z.enum(INFLOW_CHANNELS))
+      .min(1, "유입 경로를 1개 이상 선택해 주세요."),
+    purchase_purposes: z.array(z.enum(PURCHASE_PURPOSES)).default([]),
+    registered_on: isoDate,
+    first_trade_date: optionalIsoDate,
+    last_contact_date: optionalIsoDate,
+    next_event_date: optionalIsoDate,
+    memo: optionalText(MEMO_MAX, "비고"),
   })
   .superRefine((val, ctx) => {
     const today = todayInSeoul();
 
-    if (val.first_visit_date > today) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["first_visit_date"],
-        message: "최초 방문일은 오늘 이후로 지정할 수 없습니다.",
-      });
-    }
-
-    if (val.last_contact_date && val.last_contact_date > today) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["last_contact_date"],
-        message: "마지막 연락일은 오늘 이후로 지정할 수 없습니다.",
-      });
+    for (const [key, label] of [
+      ["registered_on", "고객 등록일"],
+      ["birth_date", "생년월일"],
+      ["first_trade_date", "첫 거래일자"],
+      ["last_contact_date", "마지막 연락일"],
+    ] as const) {
+      const value = val[key];
+      if (value && value > today) {
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message: `${label}은(는) 오늘 이후로 지정할 수 없습니다.`,
+        });
+      }
     }
   });
 
@@ -83,9 +100,13 @@ export function customerFormDataToObject(formData: FormData) {
   return {
     name: String(formData.get("name") ?? ""),
     phone: String(formData.get("phone") ?? ""),
-    inflow_channel: String(formData.get("inflow_channel") ?? ""),
-    first_visit_date: String(formData.get("first_visit_date") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    birth_date: String(formData.get("birth_date") ?? ""),
+    address: String(formData.get("address") ?? ""),
+    inflow_channels: formData.getAll("inflow_channels").map(String),
     purchase_purposes: formData.getAll("purchase_purposes").map(String),
+    registered_on: String(formData.get("registered_on") ?? ""),
+    first_trade_date: String(formData.get("first_trade_date") ?? ""),
     last_contact_date: String(formData.get("last_contact_date") ?? ""),
     next_event_date: String(formData.get("next_event_date") ?? ""),
     memo: String(formData.get("memo") ?? ""),
