@@ -95,6 +95,48 @@ export interface TradeRecord {
   updated_at: IsoTimestampString;
 }
 
+/** 고객별 매수 희망 가격 (금 1돈 기준, 원). 고객당 최대 1건. */
+export interface PriceTarget {
+  id: string;
+  owner_id: string;
+  customer_id: string;
+  target_price_per_don: NumericString;
+  note: string | null;
+  created_at: IsoTimestampString;
+  updated_at: IsoTimestampString;
+}
+
+export const GOLD_PRICE_SOURCES = ["MANUAL", "API"] as const;
+export type GoldPriceSource = (typeof GOLD_PRICE_SOURCES)[number];
+
+/** 일자별 순금(24K) 시세, 1돈(3.75g) 기준. owner + price_date 유니크. */
+export interface GoldPrice {
+  id: string;
+  owner_id: string;
+  price_date: IsoDateString;
+  price_per_don: NumericString;
+  source: GoldPriceSource;
+  created_at: IsoTimestampString;
+  updated_at: IsoTimestampString;
+}
+
+export const NOTIFICATION_TYPES = ["PRICE_TARGET_REACHED"] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+/** 직원(owner)별 알림. */
+export interface NotificationRow {
+  id: string;
+  owner_id: string;
+  type: string;
+  customer_id: string | null;
+  title: string;
+  body: string | null;
+  dedupe_key: string | null;
+  read_at: IsoTimestampString | null;
+  dismissed_at: IsoTimestampString | null;
+  created_at: IsoTimestampString;
+}
+
 // ─────────────────────────────────────────────────────────────
 // 입력 타입 — owner_id 는 클라이언트가 보내지 않는다.
 // DB 기본값 auth.uid() 로 채워지고 RLS 로 검증된다.
