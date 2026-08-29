@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   Select,
   SelectContent,
@@ -93,10 +95,9 @@ export function TradeForm({
         <Label htmlFor="trade_date">
           거래일 <span className="text-destructive">*</span>
         </Label>
-        <Input
+        <DateInput
           id="trade_date"
           name="trade_date"
-          type="date"
           defaultValue={v?.trade_date ?? ""}
           required
         />
@@ -178,12 +179,10 @@ export function TradeForm({
         <Label htmlFor="unit_price">
           기준 단가 (원) <span className="text-destructive">*</span>
         </Label>
-        <Input
+        <MoneyInput
           id="unit_price"
           name="unit_price"
-          type="text"
-          inputMode="numeric"
-          placeholder="예: 155000"
+          placeholder="예: 155,000"
           defaultValue={v?.unit_price ?? ""}
           required
         />
@@ -210,12 +209,10 @@ export function TradeForm({
         <Label htmlFor="amount">
           총 금액 (원) <span className="text-destructive">*</span>
         </Label>
-        <Input
+        <MoneyInput
           id="amount"
           name="amount"
-          type="text"
-          inputMode="numeric"
-          placeholder="예: 581250"
+          placeholder="예: 581,250"
           defaultValue={v?.amount ?? ""}
           required
         />

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -134,9 +135,8 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
             <Label htmlFor={visitFromId} className="text-xs text-muted-foreground">
               시작
             </Label>
-            <Input
+            <DateInput
               id={visitFromId}
-              type="date"
               name="visitFrom"
               defaultValue={filters.visitFrom ?? ""}
             />
@@ -145,9 +145,8 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
             <Label htmlFor={visitToId} className="text-xs text-muted-foreground">
               종료
             </Label>
-            <Input
+            <DateInput
               id={visitToId}
-              type="date"
               name="visitTo"
               defaultValue={filters.visitTo ?? ""}
             />

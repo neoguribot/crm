@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { saveTodayGoldPrice, type PriceActionState } from "@/lib/prices/actions";
 import { formatKoreanDate } from "@/lib/date";
 import { formatPricePerDon } from "@/lib/prices/target";
@@ -60,12 +60,11 @@ export function GoldPriceForm({
         <form action={action} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="price_per_don">시세 (원/돈)</Label>
-            <Input
+            <MoneyInput
               id="price_per_don"
               name="price_per_don"
-              inputMode="numeric"
               required
-              placeholder="예: 588750"
+              placeholder="예: 588,750"
               defaultValue={todayPrice ?? latestPrice?.price_per_don ?? ""}
               className="w-40"
             />

@@ -90,14 +90,19 @@ export const tradeRecordInputSchema = z
 
 export type TradeRecordInput = z.infer<typeof tradeRecordInputSchema>;
 
+/** 금액 입력의 1000단위 콤마를 제거한다. "1,000" → "1000" */
+function stripCommas(value: FormDataEntryValue | null): string {
+  return String(value ?? "").replace(/,/g, "");
+}
+
 export function tradeRecordFormDataToObject(formData: FormData) {
   return {
     trade_type: String(formData.get("trade_type") ?? ""),
     item_type: String(formData.get("item_type") ?? ""),
     item_detail: String(formData.get("item_detail") ?? ""),
-    unit_price: String(formData.get("unit_price") ?? ""),
+    unit_price: stripCommas(formData.get("unit_price")),
     weight: String(formData.get("weight") ?? ""),
-    amount: String(formData.get("amount") ?? ""),
+    amount: stripCommas(formData.get("amount")),
     trade_date: String(formData.get("trade_date") ?? ""),
     memo: String(formData.get("memo") ?? ""),
   };

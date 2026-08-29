@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { todayInSeoul } from "@/lib/date";
-import { tradeRecordInputSchema } from "@/lib/validation/trade-record";
+import {
+  tradeRecordFormDataToObject,
+  tradeRecordInputSchema,
+} from "@/lib/validation/trade-record";
 
 const base = {
   trade_type: "SALE",
@@ -167,5 +170,21 @@ describe("tradeRecordInputSchema", () => {
       trade_date: todayInSeoul(),
     });
     expect(parsed.trade_date).toBe(todayInSeoul());
+  });
+});
+
+describe("tradeRecordFormDataToObject", () => {
+  it("금액의 1000단위 콤마를 제거한다", () => {
+    const fd = new FormData();
+    fd.set("trade_type", "SALE");
+    fd.set("item_type", "GOLD_BAR");
+    fd.set("unit_price", "155,000");
+    fd.set("amount", "1,581,250");
+    fd.set("weight", "3.75");
+    fd.set("trade_date", "2026-01-10");
+    const obj = tradeRecordFormDataToObject(fd);
+    expect(obj.unit_price).toBe("155000");
+    expect(obj.amount).toBe("1581250");
+    expect(tradeRecordInputSchema.safeParse(obj).success).toBe(true);
   });
 });

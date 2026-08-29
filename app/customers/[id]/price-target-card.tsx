@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import {
   deletePriceTarget,
   savePriceTarget,
@@ -148,12 +149,11 @@ export function PriceTargetCard({
             </p>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="target_price_per_don">매수 희망 (원/돈)</Label>
-              <Input
+              <MoneyInput
                 id="target_price_per_don"
                 name="target_price_per_don"
-                inputMode="numeric"
                 required
-                placeholder="예: 581250"
+                placeholder="예: 581,250"
                 defaultValue={target?.target_price_per_don ?? ""}
               />
             </div>
