@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   daysBetweenIsoDates,
-  inactiveDaysSince,
   resolveLastVisitDate,
+  visitedWithin,
 } from "@/lib/customers/recent-visit";
 
 describe("daysBetweenIsoDates", () => {
@@ -43,16 +43,31 @@ describe("resolveLastVisitDate", () => {
   });
 });
 
-describe("inactiveDaysSince", () => {
-  it("정확히 30일 전이면 30", () => {
-    expect(inactiveDaysSince("2026-01-01", "2026-01-31")).toBe(30);
+describe("visitedWithin", () => {
+  const dates = ["2026-01-10", "2026-05-20", "2026-08-01"];
+
+  it("from·to 모두 없으면 항상 true", () => {
+    expect(visitedWithin(dates, null, null)).toBe(true);
+    expect(visitedWithin([], null, null)).toBe(true);
   });
 
-  it("최근 방문일이 미래면 음수 대신 0", () => {
-    expect(inactiveDaysSince("2999-01-01", "2026-03-01")).toBe(0);
+  it("구간 안에 방문일이 하나라도 있으면 true (양끝 포함)", () => {
+    expect(visitedWithin(dates, "2026-05-01", "2026-06-01")).toBe(true);
+    expect(visitedWithin(dates, "2026-08-01", "2026-08-01")).toBe(true);
   });
 
-  it("오늘 방문했으면 0", () => {
-    expect(inactiveDaysSince("2026-03-01", "2026-03-01")).toBe(0);
+  it("구간에 방문일이 없으면 false", () => {
+    expect(visitedWithin(dates, "2026-02-01", "2026-04-30")).toBe(false);
+    expect(visitedWithin(dates, "2026-09-01", null)).toBe(false);
+  });
+
+  it("한쪽만 지정", () => {
+    expect(visitedWithin(dates, null, "2026-01-31")).toBe(true);
+    expect(visitedWithin(dates, "2026-06-01", null)).toBe(true);
+    expect(visitedWithin(dates, null, "2026-01-01")).toBe(false);
+  });
+
+  it("형식이 깨진 날짜는 무시", () => {
+    expect(visitedWithin(["bad", ""], "2026-01-01", "2026-12-31")).toBe(false);
   });
 });

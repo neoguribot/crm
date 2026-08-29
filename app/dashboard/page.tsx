@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -13,15 +14,26 @@ import {
   formatKoreanDate,
   todayInSeoul,
 } from "@/lib/date";
-import { getDashboardSummary } from "@/lib/dashboard/queries";
 import {
-  ITEM_TYPE_LABELS,
+  getCustomerCountByPeriod,
+  getDashboardSummary,
+} from "@/lib/dashboard/queries";
+import {
+  parsePeriodGranularity,
+  PERIOD_GRANULARITIES,
+  PERIOD_LABELS,
+  periodHref,
+} from "@/lib/dashboard/period";
+import {
+  itemTypeLabel,
   PURCHASE_PURPOSE_LABELS,
   TRADE_TYPE_LABELS,
 } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 import { formatWon } from "@/lib/number";
 import { PURCHASE_PURPOSES } from "@/lib/types/database";
 import { requireUser } from "@/lib/supabase/require-user";
+import { PeriodTrendChart } from "@/app/dashboard/period-trend-chart";
 
 export const metadata: Metadata = {
   title: "대시보드",
@@ -68,10 +80,23 @@ function StatCard({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await requireUser();
 
-  const result = await getDashboardSummary();
+  const sp = await searchParams;
+  const granularity = parsePeriodGranularity(
+    Array.isArray(sp.period) ? sp.period[0] : sp.period,
+  );
+
+  const [result, tradePeriod, registrationPeriod] = await Promise.all([
+    getDashboardSummary(),
+    getCustomerCountByPeriod(granularity, "trade"),
+    getCustomerCountByPeriod(granularity, "registration"),
+  ]);
   const monthLabel = currentMonthLabelInSeoul();
 
   return (
@@ -106,17 +131,64 @@ export default async function DashboardPage() {
               value={formatWon(result.data.monthPurchaseAmount)}
             />
             <StatCard
-              label="90일 이상 미방문"
-              value={`${result.data.inactive90Count.toLocaleString("ko-KR")}명`}
-              href="/customers?inactiveDays=90"
-            />
-            <StatCard
               label="30일 이내 이벤트 예정"
               value={`${result.data.upcomingEventCount.toLocaleString("ko-KR")}명`}
               href="/reminders?status=ALL_UPCOMING"
               sub="리마인드 화면에서 확인"
             />
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>기간별 추이</CardTitle>
+              <CardAction>
+                <div
+                  role="group"
+                  aria-label="집계 단위"
+                  className="flex flex-wrap gap-1"
+                >
+                  {PERIOD_GRANULARITIES.map((g) => (
+                    <Link
+                      key={g}
+                      href={periodHref(g)}
+                      aria-current={g === granularity ? "page" : undefined}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                        g === granularity
+                          ? "bg-muted font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {PERIOD_LABELS[g]}
+                    </Link>
+                  ))}
+                </div>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {tradePeriod.ok && registrationPeriod.ok ? (
+                <>
+                  <PeriodTrendChart
+                    granularity={granularity}
+                    trade={tradePeriod.data}
+                    registration={registrationPeriod.data}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    막대 = 거래 고객수(거래 1건을 1명으로 셈, 반복 거래 중복) ·
+                    선 = 신규 등록 고객수(등록일 기준)
+                  </p>
+                </>
+              ) : (
+                <p className="py-4 text-center text-sm text-destructive">
+                  {!tradePeriod.ok
+                    ? tradePeriod.error
+                    : !registrationPeriod.ok
+                      ? registrationPeriod.error
+                      : ""}
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           <section
             aria-labelledby="dash-detail"
@@ -182,7 +254,7 @@ export default async function DashboardPage() {
                             {t.customer_name}
                           </Link>
                           <span className="text-muted-foreground">
-                            {ITEM_TYPE_LABELS[t.item_type]}
+                            {itemTypeLabel(t.item_type)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">

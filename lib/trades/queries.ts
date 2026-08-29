@@ -9,13 +9,14 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  * 정밀도 손실 없이 문자열로 받는다.
  */
 const LIST_COLUMNS =
-  "id, trade_type, item_type, purity::text, weight::text, amount::text, trade_date, memo, created_at";
+  "id, trade_type, item_type, item_detail, unit_price::text, weight::text, amount::text, trade_date, memo, created_at";
 
 export type TradeRecordListItem = {
   id: string;
   trade_type: TradeType;
   item_type: ItemType;
-  purity: string | null;
+  item_detail: string | null;
+  unit_price: string | null;
   weight: string;
   amount: string;
   trade_date: string;

@@ -1,0 +1,223 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { todayInSeoul } from "@/lib/date";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { detectNewlyReached, parsePriceInt } from "@/lib/prices/target";
+
+export type PriceActionState = {
+  ok: boolean;
+  error: string | null;
+  /** 시세 저장 시 새로 생성된 알림 수 */
+  newAlerts?: number;
+};
+
+const MIN_PRICE = 10_000;
+const MAX_PRICE = 100_000_000;
+
+function validatePrice(raw: unknown): number | null {
+  const s = String(raw ?? "").replace(/,/g, "").trim();
+  const n = parsePriceInt(s);
+  if (n == null || n < MIN_PRICE || n > MAX_PRICE) return null;
+  return n;
+}
+
+async function requireUserId(): Promise<string> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  return user.id;
+}
+
+/** 고객 목표가격(매수 희망) 등록·수정. */
+export async function savePriceTarget(
+  customerId: string,
+  _prev: PriceActionState,
+  formData: FormData,
+): Promise<PriceActionState> {
+  const price = validatePrice(formData.get("target_price_per_don"));
+  if (price == null) {
+    return { ok: false, error: "1돈당 희망 가격을 원 단위 숫자로 입력해 주세요." };
+  }
+  const noteRaw = String(formData.get("note") ?? "").trim();
+  const note = noteRaw.length > 0 ? noteRaw.slice(0, 500) : null;
+
+  const ownerId = await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase.from("price_targets").upsert(
+    {
+      owner_id: ownerId,
+      customer_id: customerId,
+      target_price_per_don: String(price),
+      note,
+    },
+    { onConflict: "customer_id" },
+  );
+
+  if (error) {
+    console.error("[prices] 목표가격 저장 실패:", error.message);
+    if (error.code === "42P01") {
+      return {
+        ok: false,
+        error:
+          "이 기능은 데이터베이스 마이그레이션(0006)이 필요합니다. supabase/migrations 를 확인하세요.",
+      };
+    }
+    return { ok: false, error: "목표가격을 저장하지 못했습니다." };
+  }
+
+  revalidatePath(`/customers/${customerId}`);
+  revalidatePath("/home");
+  redirect(`/customers/${customerId}`);
+}
+
+/** 고객 목표가격 삭제. */
+export async function deletePriceTarget(
+  customerId: string,
+  _prev: PriceActionState,
+  _formData: FormData,
+): Promise<PriceActionState> {
+  await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase
+    .from("price_targets")
+    .delete()
+    .eq("customer_id", customerId);
+
+  if (error) {
+    console.error("[prices] 목표가격 삭제 실패:", error.message);
+    return { ok: false, error: "목표가격을 삭제하지 못했습니다." };
+  }
+
+  revalidatePath(`/customers/${customerId}`);
+  revalidatePath("/home");
+  redirect(`/customers/${customerId}`);
+}
+
+type TargetRow = {
+  id: string;
+  customer_id: string;
+  target_price_per_don: string;
+  customers: { name: string } | null;
+};
+
+/**
+ * 오늘(Asia/Seoul) 금 시세를 저장하고, 매수 희망 가격에 새로 도달한
+ * 고객이 있으면 알림을 생성한다.
+ */
+export async function saveTodayGoldPrice(
+  _prev: PriceActionState,
+  formData: FormData,
+): Promise<PriceActionState> {
+  const price = validatePrice(formData.get("price_per_don"));
+  if (price == null) {
+    return {
+      ok: false,
+      error: "금 1돈 시세를 원 단위 숫자로 입력해 주세요 (예: 588750).",
+    };
+  }
+
+  const ownerId = await requireUserId();
+  const supabase = await createServerSupabaseClient();
+  const today = todayInSeoul();
+
+  // 직전(오늘 이전) 시세
+  const { data: prevRow, error: prevErr } = await supabase
+    .from("gold_prices")
+    .select("price_per_don::text")
+    .lt("price_date", today)
+    .order("price_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (prevErr && prevErr.code === "42P01") {
+    return {
+      ok: false,
+      error:
+        "이 기능은 데이터베이스 마이그레이션(0006)이 필요합니다. supabase/migrations 를 확인하세요.",
+    };
+  }
+  const prevPrice =
+    (prevRow as { price_per_don: string } | null)?.price_per_don ?? null;
+
+  // 오늘 시세 upsert
+  const { error: saveErr } = await supabase.from("gold_prices").upsert(
+    {
+      owner_id: ownerId,
+      price_date: today,
+      price_per_don: String(price),
+      source: "MANUAL",
+    },
+    { onConflict: "owner_id,price_date" },
+  );
+
+  if (saveErr) {
+    console.error("[prices] 시세 저장 실패:", saveErr.message);
+    return { ok: false, error: "시세를 저장하지 못했습니다." };
+  }
+
+  // 목표가격 도달 점검
+  const { data: targetRows, error: targetErr } = await supabase
+    .from("price_targets")
+    .select("id, customer_id, target_price_per_don::text, customers(name)");
+
+  if (targetErr) {
+    console.error("[prices] 목표가격 조회 실패:", targetErr.message);
+    // 시세는 저장됐으므로 성공으로 보고, 알림만 생략
+    revalidatePath("/home");
+    return { ok: true, error: null, newAlerts: 0 };
+  }
+
+  const targets = ((targetRows ?? []) as unknown as TargetRow[]).map((r) => ({
+    id: r.id,
+    customer_id: r.customer_id,
+    customer_name: r.customers?.name ?? "고객",
+    target_price_per_don: r.target_price_per_don,
+  }));
+
+  const reached = detectNewlyReached(targets, String(price), prevPrice);
+
+  let created = 0;
+  if (reached.length > 0) {
+    const dedupeKeys = reached.map((t) => `target:${t.id}:${today}`);
+    const { data: existing } = await supabase
+      .from("notifications")
+      .select("dedupe_key")
+      .in("dedupe_key", dedupeKeys);
+    const existingSet = new Set(
+      ((existing ?? []) as { dedupe_key: string }[]).map((e) => e.dedupe_key),
+    );
+
+    const toInsert = reached
+      .filter((t) => !existingSet.has(`target:${t.id}:${today}`))
+      .map((t) => ({
+        owner_id: ownerId,
+        type: "PRICE_TARGET_REACHED",
+        customer_id: t.customer_id,
+        title: `${t.customer_name} 고객의 매수 희망 가격에 도달했습니다.`,
+        body: `매수 희망 ${Number(t.target_price_per_don).toLocaleString("ko-KR")}원/돈 · 현재 ${price.toLocaleString("ko-KR")}원/돈 · 전화 상담 추천`,
+        dedupe_key: `target:${t.id}:${today}`,
+      }));
+
+    if (toInsert.length > 0) {
+      const { error: insErr } = await supabase
+        .from("notifications")
+        .insert(toInsert);
+      if (insErr) {
+        console.error("[prices] 알림 생성 실패:", insErr.message);
+      } else {
+        created = toInsert.length;
+      }
+    }
+  }
+
+  revalidatePath("/home");
+  revalidatePath("/customers", "layout");
+  return { ok: true, error: null, newAlerts: created };
+}

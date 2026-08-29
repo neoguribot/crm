@@ -14,8 +14,12 @@ import { formatKoreanDate } from "@/lib/date";
 import { getCustomerById } from "@/lib/customers/queries";
 import { listTradeRecordsByCustomer } from "@/lib/trades/queries";
 import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { summarizeHoldings } from "@/lib/trades/holdings";
+import { getLatestGoldPrice, getPriceTarget } from "@/lib/prices/queries";
 import { requireUser } from "@/lib/supabase/require-user";
 import { CustomerStageControl } from "@/app/customers/[id]/customer-stage-control";
+import { HoldingsSummary } from "@/app/customers/[id]/holdings-summary";
+import { PriceTargetCard } from "@/app/customers/[id]/price-target-card";
 import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
 
 export const metadata: Metadata = {
@@ -41,11 +45,14 @@ function Row({
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   await requireUser();
   const { id } = await params;
+  const editingTarget = (await searchParams).editTarget === "1";
 
   const result = await getCustomerById(id);
 
@@ -67,7 +74,17 @@ export default async function CustomerDetailPage({
   }
 
   const c = result.data;
-  const trades = await listTradeRecordsByCustomer(c.id);
+  const [trades, targetResult, priceResult] = await Promise.all([
+    listTradeRecordsByCustomer(c.id),
+    getPriceTarget(c.id),
+    getLatestGoldPrice(),
+  ]);
+  const holdings = trades.ok ? summarizeHoldings(trades.data) : [];
+  const priceTarget = targetResult.ok ? targetResult.data : null;
+  const currentPricePerDon =
+    priceResult.ok && priceResult.data
+      ? priceResult.data.price_per_don
+      : null;
   const purposes =
     c.purchase_purposes.length > 0
       ? c.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
@@ -120,6 +137,22 @@ export default async function CustomerDetailPage({
           <Row label="비고" value={c.memo ?? "없음"} />
         </CardContent>
       </Card>
+
+      <PriceTargetCard
+        customerId={c.id}
+        target={
+          priceTarget
+            ? {
+                target_price_per_don: priceTarget.target_price_per_don,
+                note: priceTarget.note,
+              }
+            : null
+        }
+        currentPricePerDon={currentPricePerDon}
+        editing={editingTarget}
+      />
+
+      {trades.ok ? <HoldingsSummary holdings={holdings} /> : null}
 
       <TradeHistorySection customerId={c.id} result={trades} />
     </main>

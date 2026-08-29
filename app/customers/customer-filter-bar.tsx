@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +17,6 @@ import {
 import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
 import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
 import {
-  INACTIVE_DAY_OPTIONS,
   SEARCH_MAX_LENGTH,
   type CustomerFilters,
 } from "@/lib/customers/filters";
@@ -35,14 +35,11 @@ const CHANNEL_ITEMS: Record<string, string> = {
     INFLOW_CHANNELS.map((c) => [c, INFLOW_CHANNEL_LABELS[c]]),
   ),
 };
-const INACTIVE_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(INACTIVE_DAY_OPTIONS.map((d) => [String(d), `${d}일 이상`])),
-};
-
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
   const qId = useId();
+  const visitFromId = useId();
+  const visitToId = useId();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,10 +55,13 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
     const channel = String(form.get("channel") ?? "");
     if (channel && channel !== ALL) params.set("channel", channel);
 
-    const inactiveDays = String(form.get("inactiveDays") ?? "");
-    if (inactiveDays && inactiveDays !== ALL) {
-      params.set("inactiveDays", inactiveDays);
+    let visitFrom = String(form.get("visitFrom") ?? "").trim();
+    let visitTo = String(form.get("visitTo") ?? "").trim();
+    if (visitFrom && visitTo && visitFrom > visitTo) {
+      [visitFrom, visitTo] = [visitTo, visitFrom];
     }
+    if (visitFrom) params.set("visitFrom", visitFrom);
+    if (visitTo) params.set("visitTo", visitTo);
 
     const qs = params.toString();
     router.push(qs ? `/customers?${qs}` : "/customers");
@@ -83,7 +83,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>구매목적</Label>
           <Select
@@ -126,29 +126,36 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>미방문 기간</Label>
-          <Select
-            name="inactiveDays"
-            items={INACTIVE_ITEMS}
-            defaultValue={
-              filters.inactiveDays ? String(filters.inactiveDays) : ALL
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {INACTIVE_DAY_OPTIONS.map((d) => (
-                <SelectItem key={d} value={String(d)}>
-                  {d}일 이상
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium">방문일 (기간)</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={visitFromId} className="text-xs text-muted-foreground">
+              시작
+            </Label>
+            <DateInput
+              id={visitFromId}
+              name="visitFrom"
+              defaultValue={filters.visitFrom ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={visitToId} className="text-xs text-muted-foreground">
+              종료
+            </Label>
+            <DateInput
+              id={visitToId}
+              name="visitTo"
+              defaultValue={filters.visitTo ?? ""}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          최초 방문일 또는 거래일이 이 기간 안에 있는 고객을 찾습니다.
+        </p>
+      </fieldset>
 
       <div className="flex gap-2">
         <Button type="submit">검색</Button>

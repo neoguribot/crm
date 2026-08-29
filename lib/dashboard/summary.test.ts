@@ -15,7 +15,6 @@ describe("normalizeDashboardSummary", () => {
         SELLING: 1,
         OTHER: 0,
       },
-      inactive_90_count: 5,
       upcoming_event_count: 2,
       recent_trades: [
         {
@@ -33,7 +32,6 @@ describe("normalizeDashboardSummary", () => {
     expect(s.monthSaleAmount).toBe("3500000");
     expect(s.monthPurchaseAmount).toBe("1200000");
     expect(s.purposeCounts.WEDDING).toBe(4);
-    expect(s.inactive90Count).toBe(5);
     expect(s.upcomingEventCount).toBe(2);
     expect(s.recentTrades).toHaveLength(1);
     expect(s.recentTrades[0].customer_name).toBe("홍길동");
@@ -44,7 +42,6 @@ describe("normalizeDashboardSummary", () => {
     expect(s.customerCount).toBe(0);
     expect(s.monthSaleAmount).toBe("0");
     expect(s.monthPurchaseAmount).toBe("0");
-    expect(s.inactive90Count).toBe(0);
     expect(s.upcomingEventCount).toBe(0);
     expect(s.recentTrades).toEqual([]);
     expect(s.purposeCounts).toEqual({
@@ -84,7 +81,7 @@ describe("normalizeDashboardSummary", () => {
           customer_id: `c${i}`,
           customer_name: `고객${i}`,
           trade_type: "PURCHASE",
-          item_type: "SILVER",
+          item_type: "SILVER_JEWELRY",
           amount: "1000",
           trade_date: "2026-08-01",
         })),

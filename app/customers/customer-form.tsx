@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -138,10 +139,9 @@ export function CustomerForm({
         <Label htmlFor="first_visit_date">
           최초 방문일 <span className="text-destructive">*</span>
         </Label>
-        <Input
+        <DateInput
           id="first_visit_date"
           name="first_visit_date"
-          type="date"
           defaultValue={firstVisitDefault}
           required
         />
@@ -171,10 +171,9 @@ export function CustomerForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="last_contact_date">마지막 연락일</Label>
-        <Input
+        <DateInput
           id="last_contact_date"
           name="last_contact_date"
-          type="date"
           defaultValue={lastContactDefault}
         />
         <FieldError message={errors.last_contact_date} />
@@ -182,10 +181,9 @@ export function CustomerForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="next_event_date">다음 이벤트 예정일</Label>
-        <Input
+        <DateInput
           id="next_event_date"
           name="next_event_date"
-          type="date"
           defaultValue={nextEventDefault}
         />
         <FieldError message={errors.next_event_date} />

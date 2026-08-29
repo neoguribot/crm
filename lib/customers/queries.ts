@@ -1,13 +1,12 @@
 import "server-only";
 
 import type { Customer } from "@/lib/types/database";
-import { todayInSeoul } from "@/lib/date";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { CustomerFilters } from "@/lib/customers/filters";
 import { customerMatchesQuery } from "@/lib/customers/match";
 import {
-  inactiveDaysSince,
   resolveLastVisitDate,
+  visitedWithin,
 } from "@/lib/customers/recent-visit";
 
 /** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
@@ -48,7 +47,7 @@ export type PipelineCustomer = Pick<
   "id" | "name" | "phone" | "stage" | "next_event_date" | "updated_at"
 >;
 
-/** 목록 행: 저장 컬럼 + 계산된 최근 방문일·미방문 일수. */
+/** 목록 행: 저장 컬럼 + 계산된 최근 방문일. */
 export type CustomerListItem = Pick<
   Customer,
   | "id"
@@ -60,7 +59,6 @@ export type CustomerListItem = Pick<
   | "created_at"
 > & {
   last_visit_date: string;
-  inactive_days: number;
 };
 
 export type QueryResult<T> =
@@ -106,13 +104,12 @@ export async function searchCustomers(
     };
   }
 
-  const today = todayInSeoul();
   const rows = (data ?? []) as unknown as RawListRow[];
 
-  const items: CustomerListItem[] = rows.map((row) => {
+  const mapped = rows.map((row) => {
     const tradeDates = (row.trade_records ?? []).map((t) => t.trade_date);
     const lastVisit = resolveLastVisitDate(row.first_visit_date, tradeDates);
-    return {
+    const item: CustomerListItem = {
       id: row.id,
       name: row.name,
       phone: row.phone,
@@ -121,26 +118,33 @@ export async function searchCustomers(
       first_visit_date: row.first_visit_date,
       created_at: row.created_at,
       last_visit_date: lastVisit,
-      inactive_days: inactiveDaysSince(lastVisit, today),
     };
+    // 방문일 = 최초 방문일 + 모든 거래일
+    const visitDates = [row.first_visit_date, ...tradeDates];
+    return { item, visitDates };
   });
 
-  const filtered = items.filter((c) => {
-    // 이름은 정확히 일치, 연락처는 부분 일치.
-    if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
+  const filtered = mapped
+    .filter(({ item: c, visitDates }) => {
+      // 이름은 정확히 일치, 연락처는 부분 일치.
+      if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
 
-    if (filters.channel && c.inflow_channel !== filters.channel) return false;
+      if (filters.channel && c.inflow_channel !== filters.channel) return false;
 
-    if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
-      return false;
-    }
+      if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
+        return false;
+      }
 
-    if (filters.inactiveDays && c.inactive_days < filters.inactiveDays) {
-      return false;
-    }
+      if (
+        (filters.visitFrom || filters.visitTo) &&
+        !visitedWithin(visitDates, filters.visitFrom, filters.visitTo)
+      ) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .map(({ item }) => item);
 
   return { ok: true, data: filtered };
 }
