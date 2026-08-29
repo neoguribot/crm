@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { FontSizeControl } from "@/components/font-size-control";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { APP_NAME, HOME_PATH, NAV_ITEMS } from "@/lib/constants";
 
@@ -55,6 +56,7 @@ export function AppNav() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <FontSizeControl />
           <form action="/logout" method="post">
             <Button type="submit" variant="ghost" size="sm">
