@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -13,12 +14,25 @@ import {
   formatKoreanDate,
   todayInSeoul,
 } from "@/lib/date";
-import { getDashboardSummary } from "@/lib/dashboard/queries";
+import {
+  getCustomerCountByPeriod,
+  getDashboardSummary,
+} from "@/lib/dashboard/queries";
+import {
+  formatPeriodBucket,
+  parsePeriodGranularity,
+  PERIOD_GRANULARITIES,
+  PERIOD_LABELS,
+  periodHref,
+  type PeriodGranularity,
+  type PeriodPoint,
+} from "@/lib/dashboard/period";
 import {
   ITEM_TYPE_LABELS,
   PURCHASE_PURPOSE_LABELS,
   TRADE_TYPE_LABELS,
 } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 import { formatWon } from "@/lib/number";
 import { PURCHASE_PURPOSES } from "@/lib/types/database";
 import { requireUser } from "@/lib/supabase/require-user";
@@ -68,10 +82,75 @@ function StatCard({
   );
 }
 
-export default async function DashboardPage() {
+function PeriodChart({
+  granularity,
+  points,
+}: {
+  granularity: PeriodGranularity;
+  points: PeriodPoint[];
+}) {
+  const max = points.reduce((m, p) => Math.max(m, p.count), 0);
+  const total = points.reduce((s, p) => s + p.count, 0);
+
+  if (points.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        표시할 거래가 없습니다.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <ul className="flex flex-col gap-1.5">
+        {points.map((p) => {
+          const pct = max > 0 ? Math.round((p.count / max) * 100) : 0;
+          const isMax = p.count === max && max > 0;
+          return (
+            <li key={p.bucket} className="flex items-center gap-3">
+              <span className="w-16 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                {formatPeriodBucket(p.bucket, granularity)}
+              </span>
+              <span className="relative h-5 flex-1 overflow-hidden rounded bg-muted">
+                <span
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded",
+                    isMax ? "bg-primary" : "bg-primary/45",
+                  )}
+                  style={{ width: `${Math.max(pct, p.count > 0 ? 4 : 0)}%` }}
+                />
+              </span>
+              <span className="w-10 shrink-0 text-right text-sm tabular-nums">
+                {p.count.toLocaleString("ko-KR")}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-xs text-muted-foreground">
+        최근 {points.length}개 구간 합계 {total.toLocaleString("ko-KR")}명 · 거래
+        1건을 고객 1명으로 셉니다(같은 고객의 반복 거래도 중복 집계).
+      </p>
+    </>
+  );
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   await requireUser();
 
-  const result = await getDashboardSummary();
+  const sp = await searchParams;
+  const granularity = parsePeriodGranularity(
+    Array.isArray(sp.period) ? sp.period[0] : sp.period,
+  );
+
+  const [result, periodResult] = await Promise.all([
+    getDashboardSummary(),
+    getCustomerCountByPeriod(granularity),
+  ]);
   const monthLabel = currentMonthLabelInSeoul();
 
   return (
@@ -117,6 +196,47 @@ export default async function DashboardPage() {
               sub="리마인드 화면에서 확인"
             />
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>기간별 고객수</CardTitle>
+              <CardAction>
+                <div
+                  role="group"
+                  aria-label="집계 단위"
+                  className="flex flex-wrap gap-1"
+                >
+                  {PERIOD_GRANULARITIES.map((g) => (
+                    <Link
+                      key={g}
+                      href={periodHref(g)}
+                      aria-current={g === granularity ? "page" : undefined}
+                      className={cn(
+                        "rounded-md px-2.5 py-1 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                        g === granularity
+                          ? "bg-muted font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {PERIOD_LABELS[g]}
+                    </Link>
+                  ))}
+                </div>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              {!periodResult.ok ? (
+                <p className="py-6 text-center text-sm text-destructive">
+                  {periodResult.error}
+                </p>
+              ) : (
+                <PeriodChart
+                  granularity={granularity}
+                  points={periodResult.data}
+                />
+              )}
+            </CardContent>
+          </Card>
 
           <section
             aria-labelledby="dash-detail"

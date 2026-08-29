@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { FontSizeControl } from "@/components/font-size-control";
 import { cn } from "@/lib/utils";
 import { APP_NAME, HOME_PATH, NAV_ITEMS } from "@/lib/constants";
 
@@ -53,11 +54,14 @@ export function AppNav() {
           })}
         </div>
 
-        <form action="/logout" method="post" className="ml-auto">
-          <Button type="submit" variant="ghost" size="sm">
-            로그아웃
-          </Button>
-        </form>
+        <div className="ml-auto flex items-center gap-2">
+          <FontSizeControl />
+          <form action="/logout" method="post">
+            <Button type="submit" variant="ghost" size="sm">
+              로그아웃
+            </Button>
+          </form>
+        </div>
       </nav>
     </header>
   );
