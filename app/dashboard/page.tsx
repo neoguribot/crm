@@ -25,7 +25,7 @@ import {
   periodHref,
 } from "@/lib/dashboard/period";
 import {
-  ITEM_TYPE_LABELS,
+  itemTypeLabel,
   PURCHASE_PURPOSE_LABELS,
   TRADE_TYPE_LABELS,
 } from "@/lib/labels";
@@ -254,7 +254,7 @@ export default async function DashboardPage({
                             {t.customer_name}
                           </Link>
                           <span className="text-muted-foreground">
-                            {ITEM_TYPE_LABELS[t.item_type]}
+                            {itemTypeLabel(t.item_type)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">

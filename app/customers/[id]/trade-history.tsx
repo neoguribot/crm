@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatKoreanDate } from "@/lib/date";
-import { ITEM_TYPE_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
+import { itemTypeLabel, TRADE_TYPE_LABELS } from "@/lib/labels";
 import { formatWon, trimTrailingZeros } from "@/lib/number";
 import type { QueryResult } from "@/lib/customers/queries";
 import type { TradeRecordListItem } from "@/lib/trades/queries";
@@ -54,20 +54,20 @@ export function TradeHistorySection({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th scope="col" className="py-2 pr-3 font-medium">거래일</th>
                   <th scope="col" className="py-2 pr-3 font-medium">구분</th>
                   <th scope="col" className="py-2 pr-3 font-medium">품목</th>
                   <th scope="col" className="py-2 pr-3 text-right font-medium">
-                    순도(%)
+                    기준 단가
                   </th>
                   <th scope="col" className="py-2 pr-3 text-right font-medium">
                     중량(g)
                   </th>
                   <th scope="col" className="py-2 pr-3 text-right font-medium">
-                    금액
+                    총 금액
                   </th>
                   <th scope="col" className="py-2 font-medium">비고</th>
                 </tr>
@@ -81,11 +81,17 @@ export function TradeHistorySection({
                     <td className="py-2 pr-3 whitespace-nowrap">
                       <TradeTypeBadge type={t.trade_type} />
                     </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {ITEM_TYPE_LABELS[t.item_type]}
+                    <td className="py-2 pr-3">
+                      {itemTypeLabel(t.item_type)}
+                      {t.item_type === "OTHER" && t.item_detail ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({t.item_detail})
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
-                      {t.purity ? trimTrailingZeros(t.purity) : "-"}
+                      {t.unit_price ? formatWon(t.unit_price) : "-"}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {trimTrailingZeros(t.weight)}

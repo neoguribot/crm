@@ -33,15 +33,41 @@ export type PurchasePurpose = (typeof PURCHASE_PURPOSES)[number];
 export const TRADE_TYPES = ["SALE", "PURCHASE"] as const;
 export type TradeType = (typeof TRADE_TYPES)[number];
 
+/**
+ * 거래 품목. 0007 에서 enum → text 로 바뀌어 앱에서 검증한다.
+ * PURCHASE_ONLY_ITEM_TYPES 는 매입(PURCHASE) 거래에서만 선택할 수 있다.
+ */
 export const ITEM_TYPES = [
   "GOLD_BAR",
+  "SILVER_BAR",
+  "GOLD_24K",
+  "GOLD_24K_STONE",
   "GOLD_24K_JEWELRY",
   "GOLD_18K",
   "GOLD_14K",
-  "SILVER",
+  "SILVER_JEWELRY",
   "OTHER",
+  "SILVER_SPOON",
+  "SCRAP_GOLD",
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
+
+/** 매입 거래에서만 쓰는 품목. */
+export const PURCHASE_ONLY_ITEM_TYPES = ["SILVER_SPOON", "SCRAP_GOLD"] as const;
+export type PurchaseOnlyItemType = (typeof PURCHASE_ONLY_ITEM_TYPES)[number];
+
+export function isPurchaseOnlyItemType(value: string): value is PurchaseOnlyItemType {
+  return (PURCHASE_ONLY_ITEM_TYPES as readonly string[]).includes(value);
+}
+
+/** 해당 거래구분에서 이 품목을 쓸 수 있는지. */
+export function isItemTypeAllowedForTradeType(
+  itemType: string,
+  tradeType: TradeType,
+): boolean {
+  if (tradeType === "PURCHASE") return true;
+  return !isPurchaseOnlyItemType(itemType);
+}
 
 /** 고객 영업 단계 (파이프라인 보드의 컬럼). 순서대로. */
 export const CUSTOMER_STAGES = [
@@ -86,8 +112,12 @@ export interface TradeRecord {
   customer_id: string;
   trade_type: TradeType;
   item_type: ItemType;
-  purity: NumericString | null;
+  /** 품목이 OTHER 일 때 세부 내용 */
+  item_detail: string | null;
+  /** 기준 단가(원). 0007 이전 행은 null. */
+  unit_price: NumericString | null;
   weight: NumericString;
+  /** 총 금액(원) */
   amount: NumericString;
   trade_date: IsoDateString;
   memo: string | null;
@@ -159,10 +189,11 @@ export interface TradeRecordCreateInput {
   customer_id: string;
   trade_type: TradeType;
   item_type: ItemType;
+  item_detail?: string | null;
+  unit_price: NumericString;
   weight: NumericString;
   amount: NumericString;
   trade_date: IsoDateString;
-  purity?: NumericString | null;
   memo?: string | null;
 }
 

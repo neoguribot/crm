@@ -1,6 +1,5 @@
 import {
   PURCHASE_PURPOSES,
-  type ItemType,
   type PurchasePurpose,
   type TradeType,
 } from "@/lib/types/database";
@@ -10,7 +9,8 @@ export type RecentTrade = {
   customer_id: string;
   customer_name: string;
   trade_type: TradeType;
-  item_type: ItemType;
+  /** 품목 코드 (0007 이후 text). 표시는 itemTypeLabel() 로. */
+  item_type: string;
   /** numeric → 문자열 (정밀도 유지) */
   amount: string;
   trade_date: string;
@@ -78,7 +78,7 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
           customer_id: t.customer_id,
           customer_name: t.customer_name,
           trade_type: t.trade_type,
-          item_type: t.item_type,
+          item_type: String((t as Record<string, unknown>).item_type ?? ""),
           amount: toAmountString((t as Record<string, unknown>).amount),
           trade_date: t.trade_date,
         }))

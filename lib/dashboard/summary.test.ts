@@ -81,7 +81,7 @@ describe("normalizeDashboardSummary", () => {
           customer_id: `c${i}`,
           customer_name: `고객${i}`,
           trade_type: "PURCHASE",
-          item_type: "SILVER",
+          item_type: "SILVER_JEWELRY",
           amount: "1000",
           trade_date: "2026-08-01",
         })),

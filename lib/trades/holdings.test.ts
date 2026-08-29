@@ -9,7 +9,7 @@ describe("summarizeHoldings", () => {
       { trade_type: "SALE", item_type: "GOLD_BAR" },
       { trade_type: "SALE", item_type: "GOLD_14K" },
       { trade_type: "PURCHASE", item_type: "GOLD_BAR" }, // 제외
-      { trade_type: "PURCHASE", item_type: "SILVER" }, // 제외
+      { trade_type: "PURCHASE", item_type: "SILVER_JEWELRY" }, // 제외
     ]);
     expect(holdings).toEqual([
       { itemType: "GOLD_BAR", count: 2 },
@@ -19,10 +19,13 @@ describe("summarizeHoldings", () => {
 
   it("건수 0 품목은 빠지고, ITEM_TYPES 순서를 따른다", () => {
     const holdings = summarizeHoldings([
-      { trade_type: "SALE", item_type: "SILVER" },
+      { trade_type: "SALE", item_type: "SILVER_JEWELRY" },
       { trade_type: "SALE", item_type: "GOLD_BAR" },
     ]);
-    expect(holdings.map((h) => h.itemType)).toEqual(["GOLD_BAR", "SILVER"]);
+    expect(holdings.map((h) => h.itemType)).toEqual([
+      "GOLD_BAR",
+      "SILVER_JEWELRY",
+    ]);
   });
 
   it("알 수 없는 품목·빈 입력은 무시", () => {
@@ -38,7 +41,7 @@ describe("totalHoldings", () => {
     expect(
       totalHoldings([
         { itemType: "GOLD_BAR", count: 2 },
-        { itemType: "SILVER", count: 3 },
+        { itemType: "SILVER_JEWELRY", count: 3 },
       ]),
     ).toBe(5);
     expect(totalHoldings([])).toBe(0);
