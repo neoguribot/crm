@@ -1,7 +1,7 @@
 # Supabase 설정
 
 이 디렉터리는 데이터베이스 스키마(마이그레이션 SQL)와 적용 방법을 담는다.
-아직 실제 Supabase 프로젝트에는 아무것도 적용하지 않았다.
+`0001`·`0002` 는 개발 프로젝트에 적용되어 있고, `0003` 은 아직 적용 전이다(고객 삭제 기능).
 
 ## 1. 환경변수
 
@@ -26,8 +26,13 @@ Project Settings > API 에서 확인한다.
 ### 방법 A — SQL Editor (권장, 프로젝트만 있으면 됨)
 
 1. Supabase 대시보드 > SQL Editor
-2. `migrations/0001_initial_schema.sql` 전체를 붙여넣고 실행
-3. 이 스크립트는 여러 번 실행해도 안전하다(이미 있는 객체는 건너뜀).
+2. `migrations/` 의 파일을 **번호 순서대로** 붙여넣고 실행한다.
+   - `0001_initial_schema.sql` — 테이블·enum·인덱스·트리거·RLS
+   - `0002_dashboard_summary.sql` — 대시보드 요약 RPC(`dashboard_summary()`)
+   - `0003_customer_delete.sql` — 고객 DELETE 정책 + trade_records FK on delete cascade
+   - `0004_customer_stage.sql` — 고객 `stage`(영업 단계) 컬럼 — 파이프라인 보드용
+3. 각 스크립트는 멱등이라 여러 번 실행해도 안전하다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0005_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 

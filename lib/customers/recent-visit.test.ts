@@ -1,0 +1,58 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  daysBetweenIsoDates,
+  inactiveDaysSince,
+  resolveLastVisitDate,
+} from "@/lib/customers/recent-visit";
+
+describe("daysBetweenIsoDates", () => {
+  it("같은 날은 0", () => {
+    expect(daysBetweenIsoDates("2026-03-01", "2026-03-01")).toBe(0);
+  });
+
+  it("30일 차이", () => {
+    expect(daysBetweenIsoDates("2026-01-01", "2026-01-31")).toBe(30);
+  });
+
+  it("월·연 경계를 넘어도 정확", () => {
+    expect(daysBetweenIsoDates("2025-12-31", "2026-01-01")).toBe(1);
+    expect(daysBetweenIsoDates("2024-02-28", "2024-03-01")).toBe(2); // 2024 윤년
+  });
+
+  it("from 이 미래면 음수", () => {
+    expect(daysBetweenIsoDates("2026-03-10", "2026-03-01")).toBe(-9);
+  });
+});
+
+describe("resolveLastVisitDate", () => {
+  it("거래가 없으면 최초 방문일", () => {
+    expect(resolveLastVisitDate("2026-01-10", [])).toBe("2026-01-10");
+  });
+
+  it("거래가 여러 건이면 가장 최근 거래일", () => {
+    expect(
+      resolveLastVisitDate("2026-01-10", ["2026-02-01", "2026-03-15", "2026-01-20"]),
+    ).toBe("2026-03-15");
+  });
+
+  it("모든 거래가 최초 방문일보다 이전이면 최초 방문일", () => {
+    expect(
+      resolveLastVisitDate("2026-05-01", ["2026-01-01", "2026-02-01"]),
+    ).toBe("2026-05-01");
+  });
+});
+
+describe("inactiveDaysSince", () => {
+  it("정확히 30일 전이면 30", () => {
+    expect(inactiveDaysSince("2026-01-01", "2026-01-31")).toBe(30);
+  });
+
+  it("최근 방문일이 미래면 음수 대신 0", () => {
+    expect(inactiveDaysSince("2999-01-01", "2026-03-01")).toBe(0);
+  });
+
+  it("오늘 방문했으면 0", () => {
+    expect(inactiveDaysSince("2026-03-01", "2026-03-01")).toBe(0);
+  });
+});

@@ -1,4 +1,7 @@
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -6,42 +9,37 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_DESCRIPTION, APP_NAME, NAV_ITEMS } from "@/lib/constants";
+import { APP_DESCRIPTION, APP_NAME, HOME_PATH } from "@/lib/constants";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect(HOME_PATH);
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">{APP_NAME}</CardTitle>
           <CardDescription>{APP_DESCRIPTION}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            현재 상태: 프로젝트 초기 설정 완료
+            로그인 후 홈·파이프라인·대시보드·고객관리·리마인드를 이용할 수 있습니다.
           </p>
+          <Link href="/login" className={buttonVariants({ className: "self-start" })}>
+            로그인
+          </Link>
         </CardContent>
       </Card>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">
-          앞으로 구현할 메뉴
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {NAV_ITEMS.map((item) => (
-            <Button
-              key={item.key}
-              variant="outline"
-              size="lg"
-              disabled
-              className="justify-between"
-            >
-              <span>{item.label}</span>
-              <span className="text-xs font-normal">준비 중</span>
-            </Button>
-          ))}
-        </div>
-      </section>
     </main>
   );
 }

@@ -43,6 +43,16 @@ export const ITEM_TYPES = [
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
+/** 고객 영업 단계 (파이프라인 보드의 컬럼). 순서대로. */
+export const CUSTOMER_STAGES = [
+  "NEW_INQUIRY",
+  "CONSULTING",
+  "QUOTE_SENT",
+  "PURCHASE_CONFIRMED",
+  "AFTER_CARE",
+] as const;
+export type CustomerStage = (typeof CUSTOMER_STAGES)[number];
+
 // ─────────────────────────────────────────────────────────────
 // 행(Row) 타입 — SELECT 결과
 // ─────────────────────────────────────────────────────────────
@@ -60,6 +70,7 @@ export interface Customer {
   name: string;
   phone: string;
   inflow_channel: InflowChannel;
+  stage: CustomerStage;
   first_visit_date: IsoDateString;
   purchase_purposes: PurchasePurpose[];
   last_contact_date: IsoDateString | null;
