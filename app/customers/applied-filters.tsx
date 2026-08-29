@@ -25,14 +25,14 @@ export function AppliedFilters({ filters }: { filters: CustomerFilters }) {
   if (filters.purpose) {
     chips.push({
       key: "purpose",
-      label: `구매목적: ${PURCHASE_PURPOSE_LABELS[filters.purpose]}`,
+      label: `방문 목적: ${PURCHASE_PURPOSE_LABELS[filters.purpose]}`,
       next: { ...filters, purpose: null },
     });
   }
   if (filters.channel) {
     chips.push({
       key: "channel",
-      label: `유입경로: ${INFLOW_CHANNEL_LABELS[filters.channel]}`,
+      label: `유입 경로: ${INFLOW_CHANNEL_LABELS[filters.channel]}`,
       next: { ...filters, channel: null },
     });
   }

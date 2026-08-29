@@ -85,6 +85,10 @@ export default async function CustomerDetailPage({
     priceResult.ok && priceResult.data
       ? priceResult.data.price_per_don
       : null;
+  const channels =
+    c.inflow_channels.length > 0
+      ? c.inflow_channels.map((ch) => INFLOW_CHANNEL_LABELS[ch]).join(", ")
+      : "없음";
   const purposes =
     c.purchase_purposes.length > 0
       ? c.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
@@ -110,17 +114,26 @@ export default async function CustomerDetailPage({
         </CardHeader>
         <CardContent className="divide-y">
           <Row label="이름" value={c.name} />
-          <Row label="연락처" value={c.phone} />
-          <Row label="유입경로" value={INFLOW_CHANNEL_LABELS[c.inflow_channel]} />
+          <Row label="전화번호" value={c.phone} />
+          <Row label="이메일" value={c.email ?? "없음"} />
+          <Row
+            label="생년월일"
+            value={c.birth_date ? formatKoreanDate(c.birth_date) : "없음"}
+          />
+          <Row label="주소" value={c.address ?? "없음"} />
+          <Row label="유입 경로" value={channels} />
           {c.stage ? (
             <Row label="영업 단계">
               <CustomerStageControl customerId={c.id} stage={c.stage} />
             </Row>
           ) : null}
-          <Row label="구매목적" value={purposes} />
+          <Row label="방문 목적" value={purposes} />
+          <Row label="고객 등록일" value={formatKoreanDate(c.registered_on)} />
           <Row
-            label="최초 방문일"
-            value={formatKoreanDate(c.first_visit_date)}
+            label="첫 거래일자"
+            value={
+              c.first_trade_date ? formatKoreanDate(c.first_trade_date) : "없음"
+            }
           />
           <Row
             label="마지막 연락일"

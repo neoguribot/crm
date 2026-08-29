@@ -195,11 +195,11 @@ export default async function DashboardPage({
             className="grid gap-6 lg:grid-cols-2"
           >
             <h2 id="dash-detail" className="sr-only">
-              구매목적별 고객 수와 최근 거래
+              방문 목적별 고객 수와 최근 거래
             </h2>
             <Card>
               <CardHeader>
-                <CardTitle>구매목적별 고객 수</CardTitle>
+                <CardTitle>방문 목적별 고객 수</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="flex flex-col divide-y text-sm">

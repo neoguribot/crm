@@ -28,8 +28,8 @@ describe("parseCustomerFilters", () => {
   });
 
   it("허용된 구매목적·유입경로만 수용", () => {
-    expect(parseCustomerFilters({ purpose: "FIRST_BIRTHDAY" }).purpose).toBe(
-      "FIRST_BIRTHDAY",
+    expect(parseCustomerFilters({ purpose: "GOLD_BAR" }).purpose).toBe(
+      "GOLD_BAR",
     );
     expect(parseCustomerFilters({ purpose: "예물" }).purpose).toBeNull();
     expect(parseCustomerFilters({ purpose: "NOPE" }).purpose).toBeNull();
@@ -80,12 +80,12 @@ describe("buildCustomerSearchParams", () => {
     const qs = buildCustomerSearchParams(
       filters({
         q: "김",
-        purpose: "FIRST_BIRTHDAY",
+        purpose: "GOLD_BAR",
         visitFrom: "2026-08-01",
       }),
     );
     expect(qs.get("q")).toBe("김");
-    expect(qs.get("purpose")).toBe("FIRST_BIRTHDAY");
+    expect(qs.get("purpose")).toBe("GOLD_BAR");
     expect(qs.get("visitFrom")).toBe("2026-08-01");
     expect(qs.has("channel")).toBe(false);
     expect(qs.has("visitTo")).toBe(false);

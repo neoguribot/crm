@@ -9,10 +9,10 @@ describe("normalizeDashboardSummary", () => {
       month_sale_amount: "3500000",
       month_purchase_amount: "1200000",
       purpose_counts: {
-        WEDDING: 4,
-        FIRST_BIRTHDAY: 3,
-        INVESTMENT: 2,
-        SELLING: 1,
+        PURCHASE: 4,
+        GOLD_BAR: 3,
+        STONE_PRODUCT: 2,
+        CUSTOM_JEWELRY: 1,
         OTHER: 0,
       },
       upcoming_event_count: 2,
@@ -31,7 +31,7 @@ describe("normalizeDashboardSummary", () => {
     expect(s.customerCount).toBe(12);
     expect(s.monthSaleAmount).toBe("3500000");
     expect(s.monthPurchaseAmount).toBe("1200000");
-    expect(s.purposeCounts.WEDDING).toBe(4);
+    expect(s.purposeCounts.PURCHASE).toBe(4);
     expect(s.upcomingEventCount).toBe(2);
     expect(s.recentTrades).toHaveLength(1);
     expect(s.recentTrades[0].customer_name).toBe("홍길동");
@@ -45,10 +45,10 @@ describe("normalizeDashboardSummary", () => {
     expect(s.upcomingEventCount).toBe(0);
     expect(s.recentTrades).toEqual([]);
     expect(s.purposeCounts).toEqual({
-      WEDDING: 0,
-      FIRST_BIRTHDAY: 0,
-      INVESTMENT: 0,
-      SELLING: 0,
+      PURCHASE: 0,
+      GOLD_BAR: 0,
+      STONE_PRODUCT: 0,
+      CUSTOM_JEWELRY: 0,
       OTHER: 0,
     });
   });
@@ -93,9 +93,9 @@ describe("normalizeDashboardSummary", () => {
 
   it("purpose_counts 의 알 수 없는 키는 무시하고 누락 키는 0", () => {
     const s = normalizeDashboardSummary({
-      purpose_counts: { WEDDING: 2, HACKED: 999 },
+      purpose_counts: { PURCHASE: 2, HACKED: 999 },
     });
-    expect(s.purposeCounts.WEDDING).toBe(2);
+    expect(s.purposeCounts.PURCHASE).toBe(2);
     expect(s.purposeCounts.OTHER).toBe(0);
     expect((s.purposeCounts as Record<string, number>).HACKED).toBeUndefined();
   });

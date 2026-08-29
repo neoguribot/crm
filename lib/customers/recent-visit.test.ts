@@ -26,7 +26,7 @@ describe("daysBetweenIsoDates", () => {
 });
 
 describe("resolveLastVisitDate", () => {
-  it("거래가 없으면 최초 방문일", () => {
+  it("거래가 없으면 기준 날짜", () => {
     expect(resolveLastVisitDate("2026-01-10", [])).toBe("2026-01-10");
   });
 
@@ -36,7 +36,7 @@ describe("resolveLastVisitDate", () => {
     ).toBe("2026-03-15");
   });
 
-  it("모든 거래가 최초 방문일보다 이전이면 최초 방문일", () => {
+  it("모든 거래가 기준 날짜보다 이전이면 기준 날짜", () => {
     expect(
       resolveLastVisitDate("2026-05-01", ["2026-01-01", "2026-02-01"]),
     ).toBe("2026-05-01");
