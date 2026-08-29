@@ -43,6 +43,8 @@ const INACTIVE_ITEMS: Record<string, string> = {
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
   const qId = useId();
+  const visitFromId = useId();
+  const visitToId = useId();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +64,14 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
     if (inactiveDays && inactiveDays !== ALL) {
       params.set("inactiveDays", inactiveDays);
     }
+
+    let visitFrom = String(form.get("visitFrom") ?? "").trim();
+    let visitTo = String(form.get("visitTo") ?? "").trim();
+    if (visitFrom && visitTo && visitFrom > visitTo) {
+      [visitFrom, visitTo] = [visitTo, visitFrom];
+    }
+    if (visitFrom) params.set("visitFrom", visitFrom);
+    if (visitTo) params.set("visitTo", visitTo);
 
     const qs = params.toString();
     router.push(qs ? `/customers?${qs}` : "/customers");
@@ -149,6 +159,37 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
           </Select>
         </div>
       </div>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium">방문일 (기간)</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={visitFromId} className="text-xs text-muted-foreground">
+              시작
+            </Label>
+            <Input
+              id={visitFromId}
+              type="date"
+              name="visitFrom"
+              defaultValue={filters.visitFrom ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={visitToId} className="text-xs text-muted-foreground">
+              종료
+            </Label>
+            <Input
+              id={visitToId}
+              type="date"
+              name="visitTo"
+              defaultValue={filters.visitTo ?? ""}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          최초 방문일 또는 거래일이 이 기간 안에 있는 고객을 찾습니다.
+        </p>
+      </fieldset>
 
       <div className="flex gap-2">
         <Button type="submit">검색</Button>

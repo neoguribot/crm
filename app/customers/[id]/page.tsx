@@ -14,8 +14,10 @@ import { formatKoreanDate } from "@/lib/date";
 import { getCustomerById } from "@/lib/customers/queries";
 import { listTradeRecordsByCustomer } from "@/lib/trades/queries";
 import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { summarizeHoldings } from "@/lib/trades/holdings";
 import { requireUser } from "@/lib/supabase/require-user";
 import { CustomerStageControl } from "@/app/customers/[id]/customer-stage-control";
+import { HoldingsSummary } from "@/app/customers/[id]/holdings-summary";
 import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
 
 export const metadata: Metadata = {
@@ -68,6 +70,7 @@ export default async function CustomerDetailPage({
 
   const c = result.data;
   const trades = await listTradeRecordsByCustomer(c.id);
+  const holdings = trades.ok ? summarizeHoldings(trades.data) : [];
   const purposes =
     c.purchase_purposes.length > 0
       ? c.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
@@ -120,6 +123,8 @@ export default async function CustomerDetailPage({
           <Row label="비고" value={c.memo ?? "없음"} />
         </CardContent>
       </Card>
+
+      {trades.ok ? <HoldingsSummary holdings={holdings} /> : null}
 
       <TradeHistorySection customerId={c.id} result={trades} />
     </main>

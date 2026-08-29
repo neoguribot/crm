@@ -43,6 +43,14 @@ export function AppliedFilters({ filters }: { filters: CustomerFilters }) {
       next: { ...filters, inactiveDays: null },
     });
   }
+  if (filters.visitFrom || filters.visitTo) {
+    const range = `${filters.visitFrom ?? "처음"} ~ ${filters.visitTo ?? "오늘"}`;
+    chips.push({
+      key: "visit",
+      label: `방문일: ${range}`,
+      next: { ...filters, visitFrom: null, visitTo: null },
+    });
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
