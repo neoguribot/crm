@@ -27,10 +27,16 @@ import {
 import { getCurrentAppUser } from "@/lib/users/queries";
 import { parseRemindFilter } from "@/lib/reminders/filters";
 import { getReminderData } from "@/lib/reminders/queries";
-import { itemTypeLabel, PURCHASE_PURPOSE_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
+import {
+  itemTypeLabel,
+  PURCHASE_PURPOSE_LABELS,
+  TRADE_STATUS_LABELS,
+  TRADE_TYPE_LABELS,
+} from "@/lib/labels";
 import { cn } from "@/lib/utils";
-import { formatWon } from "@/lib/number";
+import { formatWon, trimTrailingZeros } from "@/lib/number";
 import { PURCHASE_PURPOSES } from "@/lib/types/database";
+import type { PurposeCounts } from "@/lib/dashboard/summary";
 import { requireUser } from "@/lib/supabase/require-user";
 import { PeriodTrendChart } from "@/app/home/period-trend-chart";
 import { GoalCard } from "@/app/home/goal-card";
@@ -42,6 +48,26 @@ export const metadata: Metadata = {
 
 // 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
 export const dynamic = "force-dynamic";
+
+const PURPOSE_VIEWS = ["all", "today", "week", "month", "year"] as const;
+type PurposeView = (typeof PURPOSE_VIEWS)[number];
+const PURPOSE_VIEW_LABELS: Record<PurposeView, string> = {
+  all: "전체",
+  today: "오늘",
+  week: "이번 주",
+  month: "이번 달",
+  year: "올해",
+};
+
+function parsePurposeView(value: unknown): PurposeView {
+  return (PURPOSE_VIEWS as readonly string[]).includes(value as string)
+    ? (value as PurposeView)
+    : "all";
+}
+
+function purposeViewHref(view: PurposeView): string {
+  return view === "all" ? "/home" : `/home?purposeView=${view}`;
+}
 
 function StatCard({
   label,
@@ -93,6 +119,9 @@ export default async function HomePage({
     Array.isArray(sp.period) ? sp.period[0] : sp.period,
   );
   const remindFilter = parseRemindFilter(sp);
+  const purposeView = parsePurposeView(
+    Array.isArray(sp.purposeView) ? sp.purposeView[0] : sp.purposeView,
+  );
 
   const [result, tradePeriod, registrationPeriod, reminderData, appUser] =
     await Promise.all([
@@ -106,6 +135,22 @@ export default async function HomePage({
   const monthTotalAmount = result.ok
     ? String(Number(result.data.monthSaleAmount) + Number(result.data.monthPurchaseAmount))
     : "0";
+  const EMPTY_PURPOSE_COUNTS: PurposeCounts = {
+    PURCHASE: 0,
+    GOLD_BAR: 0,
+    STONE_PRODUCT: 0,
+    CUSTOM_JEWELRY: 0,
+    OTHER: 0,
+  };
+  const purposeCountsForView: PurposeCounts = result.ok
+    ? {
+        all: result.data.purposeCounts,
+        today: result.data.purposeCountsToday,
+        week: result.data.purposeCountsWeek,
+        month: result.data.purposeCountsMonth,
+        year: result.data.purposeCountsYear,
+      }[purposeView]
+    : EMPTY_PURPOSE_COUNTS;
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
@@ -252,14 +297,33 @@ export default async function HomePage({
 
           <section
             aria-labelledby="dash-detail"
-            className="grid gap-6 lg:grid-cols-2"
+            className="grid gap-6 lg:grid-cols-5"
           >
             <h2 id="dash-detail" className="sr-only">
-              방문 목적별 고객 수와 최근 거래
+              방문 목적별 고객 수와 최근 거래 내역
             </h2>
-            <Card>
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>방문 목적별 고객 수</CardTitle>
+                <CardAction>
+                  <div role="group" aria-label="집계 기간" className="flex flex-wrap gap-1">
+                    {PURPOSE_VIEWS.map((v) => (
+                      <Link
+                        key={v}
+                        href={purposeViewHref(v)}
+                        aria-current={v === purposeView ? "page" : undefined}
+                        className={cn(
+                          "rounded-md px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                          v === purposeView
+                            ? "bg-muted font-medium text-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        )}
+                      >
+                        {PURPOSE_VIEW_LABELS[v]}
+                      </Link>
+                    ))}
+                  </div>
+                </CardAction>
               </CardHeader>
               <CardContent>
                 <ul className="flex flex-col divide-y text-sm">
@@ -271,21 +335,23 @@ export default async function HomePage({
                       >
                         <span>{PURCHASE_PURPOSE_LABELS[p]}</span>
                         <span className="tabular-nums">
-                          {result.data.purposeCounts[p].toLocaleString("ko-KR")}명
+                          {purposeCountsForView[p].toLocaleString("ko-KR")}명
                         </span>
                       </Link>
                     </li>
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  한 고객이 여러 목적을 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다.
+                  {purposeView === "all"
+                    ? "한 고객이 여러 목적을 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다."
+                    : "선택한 기간 안에 거래한 고객 기준입니다(중복 목적 포함 가능)."}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="lg:col-span-3">
               <CardHeader>
-                <CardTitle>최근 거래 고객 / 최근 거래 내용</CardTitle>
+                <CardTitle>최근 거래 내역</CardTitle>
               </CardHeader>
               <CardContent>
                 {result.data.recentTrades.length === 0 ? (
@@ -299,7 +365,10 @@ export default async function HomePage({
                         key={t.id}
                         className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="tabular-nums text-muted-foreground">
+                            {formatKoreanDate(t.trade_date)}
+                          </span>
                           <Badge
                             variant={
                               t.trade_type === "SALE" ? "secondary" : "outline"
@@ -318,12 +387,19 @@ export default async function HomePage({
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
+                          {t.unit_price ? (
+                            <span className="tabular-nums text-muted-foreground">
+                              {formatWon(t.unit_price)} • {trimTrailingZeros(t.weight)}g
+                            </span>
+                          ) : (
+                            <span className="tabular-nums text-muted-foreground">
+                              {trimTrailingZeros(t.weight)}g
+                            </span>
+                          )}
                           <span className="tabular-nums">
                             {formatWon(t.amount)}
                           </span>
-                          <span className="tabular-nums text-muted-foreground">
-                            {formatKoreanDate(t.trade_date)}
-                          </span>
+                          <Badge variant="outline">{TRADE_STATUS_LABELS[t.status]}</Badge>
                         </div>
                       </li>
                     ))}

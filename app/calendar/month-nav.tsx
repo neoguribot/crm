@@ -9,8 +9,12 @@ import { monthLabel, type YearMonth } from "@/lib/calendar";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
+function monthHref(ym: YearMonth): string {
+  return `/calendar?year=${ym.year}&month=${ym.month}`;
+}
+
 /** 캘린더 헤더의 연월 표시. 클릭하면 연도/월을 바로 골라 이동할 수 있다. */
-export function MonthNav({ ym, hrefFor }: { ym: YearMonth; hrefFor: (ym: YearMonth) => string }) {
+export function MonthNav({ ym }: { ym: YearMonth }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(ym.year);
@@ -52,7 +56,7 @@ export function MonthNav({ ym, hrefFor }: { ym: YearMonth; hrefFor: (ym: YearMon
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    router.push(hrefFor({ year: pickerYear, month: m }));
+                    router.push(monthHref({ year: pickerYear, month: m }));
                   }}
                   className={`rounded-md py-1.5 text-sm tabular-nums outline-none hover:bg-muted ${
                     isCurrent ? "bg-primary text-primary-foreground hover:bg-primary" : ""

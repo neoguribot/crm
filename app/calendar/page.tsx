@@ -80,7 +80,7 @@ export default async function CalendarPage({
           <Button variant="outline" size="sm" render={<Link href={monthHref(prevMonth(ym))} />}>
             이전 달
           </Button>
-          <MonthNav ym={ym} hrefFor={monthHref} />
+          <MonthNav ym={ym} />
           <Button variant="outline" size="sm" render={<Link href={monthHref(nextMonth(ym))} />}>
             다음 달
           </Button>

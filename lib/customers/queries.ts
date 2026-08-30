@@ -136,19 +136,31 @@ export async function searchCustomers(
       // 이름은 정확히 일치, 연락처는 부분 일치.
       if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
 
-      if (filters.channel && !c.inflow_channels.includes(filters.channel)) {
+      if (
+        filters.channels.length > 0 &&
+        !c.inflow_channels.some((ch) => filters.channels.includes(ch))
+      ) {
         return false;
       }
 
-      if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
+      if (
+        filters.purposes.length > 0 &&
+        !c.purchase_purposes.some((p) => filters.purposes.includes(p))
+      ) {
         return false;
       }
 
-      if (filters.frequencyLabel && c.frequency_label !== filters.frequencyLabel) {
+      if (
+        filters.frequencyLabels.length > 0 &&
+        !filters.frequencyLabels.includes(c.frequency_label)
+      ) {
         return false;
       }
 
-      if (filters.revenueLabel && c.revenue_label !== filters.revenueLabel) {
+      if (
+        filters.revenueLabels.length > 0 &&
+        !filters.revenueLabels.includes(c.revenue_label)
+      ) {
         return false;
       }
 

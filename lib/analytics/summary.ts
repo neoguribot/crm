@@ -1,12 +1,17 @@
 import {
   FREQUENCY_LABELS,
   INFLOW_CHANNELS,
+  ITEM_TYPES,
+  PURCHASE_PURPOSES,
   REVENUE_LABELS,
   type FrequencyLabel,
   type Gender,
   type InflowChannel,
+  type ItemType,
+  type PurchasePurpose,
   type RevenueLabel,
 } from "@/lib/types/database";
+import { itemTypeToCode } from "@/lib/types/codes";
 
 export const AGE_BUCKETS = [
   "10s",
@@ -43,12 +48,24 @@ export type CustomerAnalytics = {
   revenueCounts: Record<RevenueLabel, number>;
   channelCounts: Record<InflowChannel, number>;
   ageBucketCounts: Record<AgeBucket, number>;
+  /** 방문 목적별 평균 방문 빈도(고객당 누적 거래 횟수 평균). */
+  purposeAvgFrequency: Record<PurchasePurpose, number>;
+  /** 전체 고객 평균 방문 빈도(비교 기준값). */
+  overallAvgFrequency: number;
+  /** 품목별 누적 거래 수. */
+  itemTypeCounts: Record<ItemType, number>;
   topCustomers: TopCustomer[];
+  topCustomersByCount: TopCustomer[];
 };
 
 function toCount(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+
+function toAvg(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 function isRawTopCustomer(
@@ -57,6 +74,19 @@ function isRawTopCustomer(
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return typeof v.id === "string" && typeof v.name === "string";
+}
+
+function normalizeTopCustomers(raw: unknown): TopCustomer[] {
+  return Array.isArray(raw)
+    ? raw
+        .filter(isRawTopCustomer)
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          totalAmount: String(t.total_amount ?? "0"),
+          tradeCount: toCount(t.trade_count),
+        }))
+    : [];
 }
 
 /** `customer_analytics()` RPC 의 jsonb 응답을 타입 있는 값으로 정규화한다. */
@@ -105,16 +135,21 @@ export function normalizeCustomerAnalytics(raw: unknown): CustomerAnalytics {
     AGE_BUCKETS.map((a) => [a, toCount(ageRaw[a])]),
   ) as Record<AgeBucket, number>;
 
-  const topCustomers = Array.isArray(r.top_customers)
-    ? r.top_customers
-        .filter(isRawTopCustomer)
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-          totalAmount: String(t.total_amount ?? "0"),
-          tradeCount: toCount(t.trade_count),
-        }))
-    : [];
+  const purposeAvgRaw =
+    typeof r.purpose_avg_frequency === "object" && r.purpose_avg_frequency !== null
+      ? (r.purpose_avg_frequency as Record<string, unknown>)
+      : {};
+  const purposeAvgFrequency = Object.fromEntries(
+    PURCHASE_PURPOSES.map((p) => [p, toAvg(purposeAvgRaw[p])]),
+  ) as Record<PurchasePurpose, number>;
+
+  const itemRaw =
+    typeof r.item_type_counts === "object" && r.item_type_counts !== null
+      ? (r.item_type_counts as Record<string, unknown>)
+      : {};
+  const itemTypeCounts = Object.fromEntries(
+    ITEM_TYPES.map((it) => [it, toCount(itemRaw[String(itemTypeToCode(it))])]),
+  ) as Record<ItemType, number>;
 
   return {
     customerCount: toCount(r.customer_count),
@@ -123,6 +158,10 @@ export function normalizeCustomerAnalytics(raw: unknown): CustomerAnalytics {
     revenueCounts,
     channelCounts,
     ageBucketCounts,
-    topCustomers,
+    purposeAvgFrequency,
+    overallAvgFrequency: toAvg(r.overall_avg_frequency),
+    itemTypeCounts,
+    topCustomers: normalizeTopCustomers(r.top_customers),
+    topCustomersByCount: normalizeTopCustomers(r.top_customers_by_count),
   };
 }
