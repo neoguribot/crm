@@ -4,10 +4,12 @@
 -- ⚠️ 모든 데이터는 완전한 가상 정보다. 실제 개인정보가 아니다.
 --    이름은 전부 "데모 " 로 시작하고, 비고는 전부 "[DEMO]" 로 시작한다.
 --
--- 현재 스키마(0020 기준) 반영: 성별/완료여부 필드, 거래구분·거래품목 정수
+-- 현재 스키마(0025 기준) 반영: 성별/완료여부 필드, 거래구분·거래품목 정수
 -- 코드화, customer_events(일정) 테이블, 빈도·매출 2축 라벨(frequency_label/
--- revenue_label), 추천인(referred_by_customer_id). 방문 목적·유입 경로는
--- 0008 이후 어휘(PURCHASE/GOLD_BAR/STONE_PRODUCT/CUSTOM_JEWELRY/OTHER 등) 사용.
+-- revenue_label), 추천인(referred_by_customer_id), 유입경로·방문목적 "기타"
+-- 세부내용(inflow_channel_detail/purchase_purpose_detail, 0022). 방문 목적·
+-- 유입 경로는 0008 이후 어휘(PURCHASE/GOLD_BAR/STONE_PRODUCT/CUSTOM_JEWELRY/
+-- OTHER 등) 사용.
 --
 -- 안전장치:
 --  1) 아래 v_raw 에 대상 테스트 사용자 UUID 를 넣지 않으면 실행이 중단된다.
@@ -132,6 +134,18 @@ begin
     md5(v_uid::text || ':demo-customer:c05')::uuid
     where id = md5(v_uid::text || ':demo-customer:c14')::uuid
       and owner_id = v_uid;
+
+  -- 유입경로·방문목적을 "기타"로 선택한 고객의 세부 내용(0022 컬럼).
+  update public.customers set purchase_purpose_detail = '시계 수리 문의'
+    where id = md5(v_uid::text || ':demo-customer:c04')::uuid and owner_id = v_uid;
+  update public.customers set inflow_channel_detail = '동네 전단지'
+    where id = md5(v_uid::text || ':demo-customer:c05')::uuid and owner_id = v_uid;
+  update public.customers set inflow_channel_detail = '길 지나가다 방문'
+    where id = md5(v_uid::text || ':demo-customer:c10')::uuid and owner_id = v_uid;
+  update public.customers set purchase_purpose_detail = '반지 사이즈 수선'
+    where id = md5(v_uid::text || ':demo-customer:c14')::uuid and owner_id = v_uid;
+  update public.customers set inflow_channel_detail = '라디오 광고'
+    where id = md5(v_uid::text || ':demo-customer:c15')::uuid and owner_id = v_uid;
 
   -- ================================================================
   -- 거래 24건 (거래구분/거래품목/완료여부는 정수 코드로 저장)

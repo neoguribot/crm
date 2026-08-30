@@ -10,7 +10,7 @@ import { visitedWithin } from "@/lib/customers/recent-visit";
 const CUSTOMER_FIELDS =
   "id, name, phone, email, birth_date, gender, address, inflow_channels, inflow_channel_detail, purchase_purposes, purchase_purpose_detail, frequency_label, revenue_label, referred_by_customer_id, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
 
-/** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
+/** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(방문일 구간 필터 계산용). */
 const LIST_COLUMNS = `${CUSTOMER_FIELDS}, trade_records(trade_date)`;
 
 /** 상세/수정에 필요한 컬럼. */
