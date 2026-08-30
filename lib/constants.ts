@@ -9,14 +9,14 @@ export const APP_DESCRIPTION =
 export const HOME_PATH = "/home";
 
 /**
- * 로그인 후 공통 네비게이션.
- * - 홈은 별도 항목 없이 상단 "고객관리 CRM" 브랜드 링크로 이동한다.
- * - 거래는 고객 상세 화면에서 관리하므로 별도 항목을 두지 않는다.
- * - 세그먼트(검색·구매목적·유입경로·방문일 필터)는 "고객관리" 화면 상단에 있다.
+ * 로그인 후 공통 네비게이션. 원본 요구사항 메뉴 구성(홈/고객관리/거래관리/
+ * 시세관리/캘린더/종합분석/사용자설정) 기준. 캘린더·종합분석·사용자설정은
+ * 후순위 작업이라 아직 메뉴에 없다.
  */
 export const NAV_ITEMS = [
-  { href: "/pipeline", label: "파이프라인" },
-  { href: "/dashboard", label: "대시보드" },
+  { href: "/home", label: "홈" },
   { href: "/customers", label: "고객관리" },
+  { href: "/transactions", label: "거래관리" },
+  { href: "/prices", label: "시세관리" },
   { href: "/reminders", label: "리마인드" },
 ] as const;

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { genderToCode } from "@/lib/types/codes";
 import {
   customerFormDataToObject,
   customerInputSchema,
@@ -50,13 +51,14 @@ export async function createCustomer(
       phone: parsed.data.phone,
       email: parsed.data.email,
       birth_date: parsed.data.birth_date,
+      gender: genderToCode(parsed.data.gender),
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
       purchase_purposes: parsed.data.purchase_purposes,
+      grade: parsed.data.grade,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,
-      next_event_date: parsed.data.next_event_date,
       memo: parsed.data.memo,
     })
     .select("id")
@@ -112,13 +114,14 @@ export async function updateCustomer(
       phone: parsed.data.phone,
       email: parsed.data.email,
       birth_date: parsed.data.birth_date,
+      gender: genderToCode(parsed.data.gender),
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
       purchase_purposes: parsed.data.purchase_purposes,
+      grade: parsed.data.grade,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,
-      next_event_date: parsed.data.next_event_date,
       memo: parsed.data.memo,
     })
     .eq("id", id)

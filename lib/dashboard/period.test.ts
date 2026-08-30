@@ -21,8 +21,8 @@ describe("parsePeriodGranularity", () => {
 
 describe("periodHref", () => {
   it("day 는 파라미터 없이, 나머지는 쿼리로", () => {
-    expect(periodHref("day")).toBe("/dashboard");
-    expect(periodHref("month")).toBe("/dashboard?period=month");
+    expect(periodHref("day")).toBe("/home");
+    expect(periodHref("month")).toBe("/home?period=month");
   });
 });
 

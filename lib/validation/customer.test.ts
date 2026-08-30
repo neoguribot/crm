@@ -11,13 +11,14 @@ const validBase = {
   phone: "010-1234-5678",
   email: "",
   birth_date: "",
+  gender: "UNKNOWN",
   address: "",
   inflow_channels: ["CARROT_MARKET", "KAKAO_MAP"],
   purchase_purposes: ["PURCHASE", "GOLD_BAR"],
+  grade: "",
   registered_on: "2026-01-10",
   first_trade_date: "",
   last_contact_date: "",
-  next_event_date: "",
   memo: "",
 };
 
@@ -41,8 +42,22 @@ describe("customerInputSchema", () => {
     expect(parsed.address).toBeNull();
     expect(parsed.first_trade_date).toBeNull();
     expect(parsed.last_contact_date).toBeNull();
-    expect(parsed.next_event_date).toBeNull();
+    expect(parsed.grade).toBeNull();
     expect(parsed.memo).toBeNull();
+  });
+
+  it("성별 기본값은 UNKNOWN", () => {
+    const { gender: _gender, ...rest } = validBase;
+    expect(customerInputSchema.parse(rest).gender).toBe("UNKNOWN");
+  });
+
+  it("올바른 등급을 통과시키고 알 수 없는 등급은 거부한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, grade: "VIP" }).grade,
+    ).toBe("VIP");
+    expect(
+      customerInputSchema.safeParse({ ...validBase, grade: "다이아" }).success,
+    ).toBe(false);
   });
 
   it("이름이 공백만이면 거부한다", () => {
@@ -118,13 +133,6 @@ describe("customerInputSchema", () => {
           .success,
       ).toBe(false);
     }
-  });
-
-  it("미래 다음 이벤트 예정일은 허용한다", () => {
-    expect(
-      customerInputSchema.parse({ ...validBase, next_event_date: "2999-12-31" })
-        .next_event_date,
-    ).toBe("2999-12-31");
   });
 
   it("오늘 날짜의 등록일을 허용한다", () => {

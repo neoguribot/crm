@@ -30,9 +30,21 @@ Project Settings > API 에서 확인한다.
    - `0001_initial_schema.sql` — 테이블·enum·인덱스·트리거·RLS
    - `0002_dashboard_summary.sql` — 대시보드 요약 RPC(`dashboard_summary()`)
    - `0003_customer_delete.sql` — 고객 DELETE 정책 + trade_records FK on delete cascade
-   - `0004_customer_stage.sql` — 고객 `stage`(영업 단계) 컬럼 — 파이프라인 보드용
+   - `0004_customer_stage.sql` — 고객 `stage`(영업 단계) 컬럼 — 이후 0011 에서 삭제(파이프라인 제거)
+   - `0005_customer_count_by_period.sql` — 기간별 고객수 RPC
+   - `0006_price_targets_notifications.sql` — 목표가격·시세·알림 테이블
+   - `0007_trade_item_revamp.sql` — 거래 품목 개편(enum→text, 단가 추가)
+   - `0008_customer_fields_revamp.sql` — 고객 항목 개편(유입경로/방문목적 다중선택 등)
+   - `0009_missing_fields.sql` — 성별·등급·완료여부 필드 추가
+   - `0010_integer_codes.sql` — 거래구분·거래품목 정수 코드화 + 고아 enum 정리
+   - `0011_remove_pipeline.sql` — 파이프라인 삭제에 따른 `stage` 제거
+   - `0012_customer_events.sql` — 고객 일정(`customer_events`) 테이블, 여러 건 동시 관리
+   - `0013_users_table.sql` — 사용자 프로필(`users`, 목표값) 테이블
+   - `0014_last_contact_trigger.sql` — 거래 등록 시 마지막 연락일 자동 갱신
+   - `0015_dashboard_summary_v3.sql` — 홈 통합 대시보드용 지표 확장
+   - `0016_trade_records_delete.sql` — 거래관리 화면의 거래 삭제를 위한 DELETE 정책
 3. 각 스크립트는 멱등이라 여러 번 실행해도 안전하다.
-4. 스키마 변경은 기존 파일을 고치지 말고 `0005_*.sql` 처럼 새 파일로 추가한다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0017_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 
@@ -52,28 +64,32 @@ supabase gen types typescript --linked > lib/types/database.generated.ts
 
 ## 3. 데이터 모델 요약
 
-- `customers` 1 : N `trade_records`
+- `customers` 1 : N `trade_records`, 1 : N `customer_events`(일정, 거래와 선택적 연동)
+- `users` 는 `auth.users` 와 1:1(프로필/목표값만 저장, 인증 자체는 Supabase Auth)
 - 모든 행은 `owner_id`(= `auth.users.id`) 에 묶인다. `owner_id` 기본값은 `auth.uid()`.
 - 최근 방문일 / 리마인드 상태는 **컬럼으로 저장하지 않고 조회 시 계산**한다.
-  - 최근 방문일 = 거래가 있으면 `max(trade_records.trade_date)`, 없으면 `customers.first_visit_date`
-  - 리마인드 분류 = `next_event_date` 와 오늘 날짜(Asia/Seoul) 비교
+  - 최근 방문일 = 거래가 있으면 `max(trade_records.trade_date)`, 없으면 `customers.registered_on`
+  - 리마인드 분류 = `customer_events.event_date` 와 오늘 날짜(Asia/Seoul) 비교(0012 이후, 고객당 여러 건 가능)
+- 성별·거래구분·거래품목·완료여부는 문서 요구사항대로 **DB에는 정수 코드**로 저장한다
+  (0009/0010). 앱 코드(zod·폼·라벨)는 계속 문자열 식별자를 쓰고, `lib/types/codes.ts` 가
+  Supabase 조회/저장 시점에만 변환한다.
 
 ## 4. 구매목적 저장 방식 — PostgreSQL enum 배열
 
-`customers.purchase_purposes public.purchase_purpose[]` (별도 관계 테이블 아님).
+`customers.purchase_purposes text[]` (0008 에서 enum[] → text[] 로 전환, 별도 관계 테이블 아님).
 
 이유:
 - 선택지가 작고 고정적이며 고객에 완전히 종속된 값 집합이다.
 - 단일 행 조회·수정이 간단하고, RLS 정책이 `customers` 하나로 끝난다.
   관계 테이블을 두면 그 테이블에도 별도 정책이 필요하다.
-- 세그먼트 필터는 `purchase_purposes @> array['WEDDING']::purchase_purpose[]`
-  (포함) 또는 `&&`(교집합) 로 표현할 수 있다.
+- 세그먼트 필터는 `purchase_purposes @> array['GOLD_BAR']` (포함) 또는 `&&`(교집합)
+  로 표현할 수 있다.
 - 관계 테이블은 목적별 통계가 매우 복잡하거나 목적에 속성(날짜·메모)이 붙을 때
   유리한데, MVP 범위가 아니다.
 
 ## 5. numeric 값 처리 (정밀도)
 
-`amount`, `weight`, `purity` 는 PostgreSQL `numeric` 이다.
+`amount`, `weight`, `unit_price` 는 PostgreSQL `numeric` 이다.
 
 - PostgREST/`supabase-js` 는 기본적으로 `numeric` 을 **JSON 숫자**로 반환한다.
   JavaScript `number` 는 IEEE 754 배정밀도라 소수 세 자리 중량 등의 합산에서
@@ -82,7 +98,7 @@ supabase gen types typescript --linked > lib/types/database.generated.ts
   1. TypeScript 타입에서 이 컬럼들을 `string`(`NumericString`) 으로 선언해,
      "숫자로 함부로 연산하지 말 것"을 신호한다.
   2. 조회 시 명시적 텍스트 캐스팅으로 문자열을 받는다. 예:
-     `.select('id, amount::text, weight::text, purity::text, ...')`
+     `.select('id, amount::text, weight::text, unit_price::text, ...')`
      (데이터 접근 계층은 다음 단계에서 구현)
   3. 합계·평균 등 집계는 앱에서 float 로 더하지 말고 **DB 에서 계산**
      (`sum(amount)`, RPC/뷰)해 정확한 결과를 받는다.

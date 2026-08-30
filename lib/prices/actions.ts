@@ -72,7 +72,7 @@ export async function savePriceTarget(
   }
 
   revalidatePath(`/customers/${customerId}`);
-  revalidatePath("/home");
+  revalidatePath("/prices");
   redirect(`/customers/${customerId}`);
 }
 
@@ -96,7 +96,7 @@ export async function deletePriceTarget(
   }
 
   revalidatePath(`/customers/${customerId}`);
-  revalidatePath("/home");
+  revalidatePath("/prices");
   redirect(`/customers/${customerId}`);
 }
 
@@ -170,7 +170,7 @@ export async function saveTodayGoldPrice(
   if (targetErr) {
     console.error("[prices] 목표가격 조회 실패:", targetErr.message);
     // 시세는 저장됐으므로 성공으로 보고, 알림만 생략
-    revalidatePath("/home");
+    revalidatePath("/prices");
     return { ok: true, error: null, newAlerts: 0 };
   }
 
@@ -217,7 +217,55 @@ export async function saveTodayGoldPrice(
     }
   }
 
-  revalidatePath("/home");
+  revalidatePath("/prices");
   revalidatePath("/customers", "layout");
   return { ok: true, error: null, newAlerts: created };
+}
+
+/** 시세 이력 1건 수정 (금액만). */
+export async function updateGoldPrice(
+  priceId: string,
+  _prev: PriceActionState,
+  formData: FormData,
+): Promise<PriceActionState> {
+  const price = validatePrice(formData.get("price_per_don"));
+  if (price == null) {
+    return { ok: false, error: "금 1돈 시세를 원 단위 숫자로 입력해 주세요." };
+  }
+
+  await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase
+    .from("gold_prices")
+    .update({ price_per_don: String(price) })
+    .eq("id", priceId);
+
+  if (error) {
+    console.error("[prices] 시세 수정 실패:", error.message);
+    return { ok: false, error: "시세를 수정하지 못했습니다." };
+  }
+
+  revalidatePath("/prices");
+  return { ok: true, error: null };
+}
+
+/** 시세 이력 1건 삭제. */
+export async function deleteGoldPrice(
+  priceId: string,
+  _prev: PriceActionState,
+  _formData: FormData,
+): Promise<PriceActionState> {
+  await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase.from("gold_prices").delete().eq("id", priceId);
+
+  if (error) {
+    console.error("[prices] 시세 삭제 실패:", error.message);
+    return { ok: false, error: "시세를 삭제하지 못했습니다." };
+  }
+
+  revalidatePath("/prices");
+  return { ok: true, error: null };
 }

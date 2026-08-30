@@ -18,9 +18,9 @@ export function parsePeriodGranularity(value: unknown): PeriodGranularity {
     : "day";
 }
 
-/** 단위를 `/dashboard` 링크 href 로. 기본(day)은 파라미터 없이. */
+/** 단위를 `/home` 링크 href 로. 기본(day)은 파라미터 없이. */
 export function periodHref(granularity: PeriodGranularity): string {
-  return granularity === "day" ? "/dashboard" : `/dashboard?period=${granularity}`;
+  return granularity === "day" ? "/home" : `/home?period=${granularity}`;
 }
 
 /** 집계 기준: 거래 건수 / 신규 등록 고객수. */

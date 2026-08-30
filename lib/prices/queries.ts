@@ -57,6 +57,32 @@ export async function getTodayGoldPrice(): Promise<
   return { ok: true, data: (data as unknown as LatestGoldPrice) ?? null };
 }
 
+export type GoldPriceListItem = Pick<
+  GoldPrice,
+  "id" | "price_date" | "price_per_don" | "source"
+>;
+
+/** 시세 이력. 최근 순. 마이그레이션 0006 미적용 DB(42P01)는 빈 목록으로. */
+export async function listGoldPrices(
+  limit = 90,
+): Promise<QueryResult<GoldPriceListItem[]>> {
+  const supabase = await createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("gold_prices")
+    .select("id, price_date, price_per_don::text, source")
+    .order("price_date", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (error.code === "42P01") return { ok: true, data: [] };
+    console.error("[prices] 시세 이력 조회 실패:", error.message);
+    return { ok: false, error: "시세 이력을 불러오지 못했습니다." };
+  }
+
+  return { ok: true, data: (data ?? []) as unknown as GoldPriceListItem[] };
+}
+
 export type CustomerPriceTarget = Pick<
   PriceTarget,
   "id" | "customer_id" | "target_price_per_don" | "note" | "updated_at"

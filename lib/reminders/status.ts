@@ -1,6 +1,6 @@
 import { daysBetweenIsoDates } from "@/lib/customers/recent-visit";
 
-/** 고객 1명의 리마인드 상태 (next_event_date 로 계산, DB 에 저장하지 않음). */
+/** 일정 1건의 리마인드 상태 (customer_events.event_date 로 계산, DB 에 저장하지 않음). */
 export const REMIND_STATUSES = [
   "OVERDUE",
   "WITHIN_7_DAYS",
@@ -57,7 +57,7 @@ export function remindDayDelta(
 }
 
 /**
- * next_event_date 로 리마인드 상태를 계산한다.
+ * 일정의 event_date 로 리마인드 상태를 계산한다.
  * - 없음 → NO_EVENT
  * - 오늘 이전 → OVERDUE
  * - 오늘 ~ 7일(오늘 포함) → WITHIN_7_DAYS

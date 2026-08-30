@@ -8,6 +8,7 @@ import {
 } from "@/lib/number";
 import {
   ITEM_TYPES,
+  TRADE_STATUSES,
   TRADE_TYPES,
   isItemTypeAllowedForTradeType,
 } from "@/lib/types/database";
@@ -56,6 +57,7 @@ export const tradeRecordInputSchema = z
     weight: positiveDecimal("중량", 3),
     // 총 금액: numeric(15,0)
     amount: wonAmount("총 금액"),
+    status: z.enum(TRADE_STATUSES, { message: "완료 여부를 선택해 주세요." }),
     trade_date: z
       .string()
       .trim()
@@ -103,6 +105,7 @@ export function tradeRecordFormDataToObject(formData: FormData) {
     unit_price: stripCommas(formData.get("unit_price")),
     weight: String(formData.get("weight") ?? ""),
     amount: stripCommas(formData.get("amount")),
+    status: String(formData.get("status") ?? "DONE"),
     trade_date: String(formData.get("trade_date") ?? ""),
     memo: String(formData.get("memo") ?? ""),
   };

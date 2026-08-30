@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatKoreanDate } from "@/lib/date";
-import { PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { EVENT_TYPE_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
 import { parseRemindFilter, remindFilterHref } from "@/lib/reminders/filters";
 import { getReminderData } from "@/lib/reminders/queries";
 import {
@@ -56,7 +56,7 @@ export default async function RemindersPage({
       <div>
         <h1 className="text-xl font-semibold">리마인드</h1>
         <p className="text-sm text-muted-foreground">
-          다음 이벤트 예정일 기준
+          고객 일정(customer_events) 기준
           {result.ok
             ? ` · 기준일 ${formatKoreanDate(result.data.today)} (Asia/Seoul)`
             : ""}
@@ -97,50 +97,49 @@ export default async function RemindersPage({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            총 {result.data.items.length}명
+            총 {result.data.items.length}건
           </p>
 
           {result.data.items.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                조건에 맞는 고객이 없습니다.
+                조건에 맞는 일정이 없습니다.
               </CardContent>
             </Card>
           ) : (
             <ul className="flex flex-col gap-3">
-              {result.data.items.map((c) => (
-                <li key={c.id}>
+              {result.data.items.map((ev) => (
+                <li key={ev.id}>
                   <Card>
                     <CardContent className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{c.name}</span>
-                        <Badge variant={STATUS_BADGE[c.status]}>
-                          {REMIND_STATUS_LABELS[c.status]}
+                        <span className="font-medium">{ev.name}</span>
+                        <Badge variant="outline">{EVENT_TYPE_LABELS[ev.event_type]}</Badge>
+                        <Badge variant={STATUS_BADGE[ev.status]}>
+                          {REMIND_STATUS_LABELS[ev.status]}
                         </Badge>
-                        {c.next_event_date ? (
-                          <span className="text-sm text-muted-foreground tabular-nums">
-                            {formatKoreanDate(c.next_event_date)} ·{" "}
-                            {formatDayDelta(c.dayDelta)}
-                          </span>
-                        ) : null}
+                        <span className="text-sm text-muted-foreground tabular-nums">
+                          {formatKoreanDate(ev.event_date)} ·{" "}
+                          {formatDayDelta(ev.dayDelta)}
+                        </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          연락처: <CopyablePhone phone={c.phone} />
+                          연락처: <CopyablePhone phone={ev.phone} />
                         </span>
                         <span>
                           방문 목적:{" "}
-                          {c.purchase_purposes.length > 0
-                            ? c.purchase_purposes
+                          {ev.purchase_purposes.length > 0
+                            ? ev.purchase_purposes
                                 .map((p) => PURCHASE_PURPOSE_LABELS[p])
                                 .join(", ")
                             : "없음"}
                         </span>
                         <span>
                           마지막 연락일:{" "}
-                          {c.last_contact_date
-                            ? formatKoreanDate(c.last_contact_date)
+                          {ev.last_contact_date
+                            ? formatKoreanDate(ev.last_contact_date)
                             : "없음"}
                         </span>
                       </div>
@@ -149,7 +148,7 @@ export default async function RemindersPage({
                         <Button
                           size="sm"
                           variant="outline"
-                          render={<Link href={`/customers/${c.id}`} />}
+                          render={<Link href={`/customers/${ev.customer_id}`} />}
                         >
                           고객 상세
                         </Button>
