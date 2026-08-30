@@ -21,12 +21,13 @@ import {
   INFLOW_CHANNEL_LABELS,
   PURCHASE_PURPOSE_LABELS,
 } from "@/lib/labels";
-import { summarizeHoldings } from "@/lib/trades/holdings";
+import { summarizeHoldings, totalHoldingsWeight } from "@/lib/trades/holdings";
 import { getLatestGoldPrice, getPriceTarget } from "@/lib/prices/queries";
 import { requireUser } from "@/lib/supabase/require-user";
 import { EventsSection } from "@/app/customers/[id]/events-section";
 import { HoldingsSummary } from "@/app/customers/[id]/holdings-summary";
 import { PriceTargetCard } from "@/app/customers/[id]/price-target-card";
+import { ProfitCard } from "@/app/customers/[id]/profit-card";
 import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
 
 export const metadata: Metadata = {
@@ -91,6 +92,11 @@ export default async function CustomerDetailPage({
   const cumulativeSaleAmount = trades.ok
     ? trades.data
         .filter((t) => t.trade_type === "SALE")
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+    : 0;
+  const cumulativePurchaseAmount = trades.ok
+    ? trades.data
+        .filter((t) => t.trade_type === "PURCHASE")
         .reduce((sum, t) => sum + Number(t.amount || 0), 0)
     : 0;
   const suggestedGrade = suggestGrade(cumulativeSaleAmount);
@@ -178,6 +184,16 @@ export default async function CustomerDetailPage({
       />
 
       {trades.ok ? <HoldingsSummary holdings={holdings} /> : null}
+
+      {trades.ok ? (
+        <ProfitCard
+          totalWeightGrams={totalHoldingsWeight(holdings)}
+          costBasisAmount={String(cumulativeSaleAmount)}
+          currentPricePerDon={currentPricePerDon}
+          saleAmount={String(cumulativeSaleAmount)}
+          purchaseAmount={String(cumulativePurchaseAmount)}
+        />
+      ) : null}
 
       <TradeHistorySection customerId={c.id} result={trades} />
 
