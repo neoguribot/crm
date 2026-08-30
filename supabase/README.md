@@ -1,7 +1,7 @@
 # Supabase 설정
 
 이 디렉터리는 데이터베이스 스키마(마이그레이션 SQL)와 적용 방법을 담는다.
-`0001`·`0002` 는 개발 프로젝트에 적용되어 있고, `0003` 은 아직 적용 전이다(고객 삭제 기능).
+`0001` ~ `0018` 을 번호 순서대로 적용하면 현재 앱과 일치하는 스키마가 된다.
 
 ## 1. 환경변수
 
@@ -43,8 +43,11 @@ Project Settings > API 에서 확인한다.
    - `0014_last_contact_trigger.sql` — 거래 등록 시 마지막 연락일 자동 갱신
    - `0015_dashboard_summary_v3.sql` — 홈 통합 대시보드용 지표 확장
    - `0016_trade_records_delete.sql` — 거래관리 화면의 거래 삭제를 위한 DELETE 정책
+   - `0017_gold_price_history.sql` — 시세를 "하루 1건 덮어쓰기"에서 "등록마다 쌓이는
+     이력"으로 전환(`price_date` → `registered_at timestamptz`)
+   - `0018_customer_analytics.sql` — 종합 분석 화면용 집계 RPC(`customer_analytics()`)
 3. 각 스크립트는 멱등이라 여러 번 실행해도 안전하다.
-4. 스키마 변경은 기존 파일을 고치지 말고 `0017_*.sql` 처럼 새 파일로 추가한다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0019_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 
@@ -74,7 +77,7 @@ supabase gen types typescript --linked > lib/types/database.generated.ts
   (0009/0010). 앱 코드(zod·폼·라벨)는 계속 문자열 식별자를 쓰고, `lib/types/codes.ts` 가
   Supabase 조회/저장 시점에만 변환한다.
 
-## 4. 구매목적 저장 방식 — PostgreSQL enum 배열
+## 4. 구매목적 저장 방식 — text[] (다중 선택)
 
 `customers.purchase_purposes text[]` (0008 에서 enum[] → text[] 로 전환, 별도 관계 테이블 아님).
 
@@ -117,10 +120,13 @@ supabase gen types typescript --linked > lib/types/database.generated.ts
 | `idx_customers_owner_id` (owner_id) | 테넌트 범위 필터, 대시보드의 전체 고객 수 |
 | `idx_customers_owner_name` (owner_id, name) | 이름 정렬·접두어 검색(내 고객 안에서) |
 | `idx_customers_owner_phone` (owner_id, phone) | 전화번호 조회, 중복 번호 경고 |
-| `idx_customers_owner_first_visit_date` (owner_id, first_visit_date) | 대시보드 신규 고객 집계, 최근 방문일 계산 보조 |
-| `idx_customers_owner_next_event_date` (owner_id, next_event_date) | 리마인드 대상 목록 |
+| `idx_customers_owner_first_visit_date` (owner_id, first_trade_date) | 대시보드 신규 고객 집계, 최근 방문일 계산 보조 (0008 에서 컬럼명만 first_trade_date 로 변경, 인덱스명은 그대로) |
 | `idx_trade_records_customer_id` (customer_id) | "이 고객의 거래 내역" |
 | `idx_trade_records_owner_trade_date` (owner_id, trade_date desc) | 대시보드 기간별 집계, 내 거래 최근순 |
+| `idx_customer_events_owner_date` (owner_id, event_date) | 리마인드 대상 목록, 홈 대시보드 일정 위젯 |
+| `idx_customer_events_customer_id` (customer_id) | 고객 상세의 일정 섹션 |
+| `idx_customer_events_trade_id` (trade_id) | 거래에 연동된 일정 조회 |
+| `idx_gold_prices_owner_registered_at_desc` (owner_id, registered_at desc) | 시세 이력 최신순 조회(0017) |
 
 일부러 만들지 않은 인덱스:
 
@@ -144,14 +150,21 @@ supabase gen types typescript --linked > lib/types/database.generated.ts
 운영 데이터가 있으면 함께 삭제되므로 주의한다.
 
 ```sql
--- 정책·트리거는 테이블과 함께 삭제된다.
+-- 정책·트리거는 테이블과 함께 삭제된다. FK 때문에 참조하는 테이블부터 지운다.
+drop table if exists public.customer_events;
+drop table if exists public.notifications;
+drop table if exists public.gold_prices;
+drop table if exists public.price_targets;
 drop table if exists public.trade_records;
 drop table if exists public.customers;
+drop table if exists public.users;
 drop function if exists public.set_updated_at();
-drop type if exists public.item_type;
-drop type if exists public.trade_type;
-drop type if exists public.purchase_purpose;
-drop type if exists public.inflow_channel;
+drop function if exists public.handle_new_auth_user();
+drop function if exists public.trade_records_touch_last_contact();
+drop function if exists public.dashboard_summary();
+drop function if exists public.customer_count_by_period(text, text);
+drop function if exists public.customer_analytics();
+drop trigger if exists trg_handle_new_auth_user on auth.users;
 ```
 
 이 SQL 은 마이그레이션 파일에 넣지 않는다(실수 실행 방지).
