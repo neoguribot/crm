@@ -39,6 +39,15 @@ describe("parseCustomerFilters", () => {
     expect(parseCustomerFilters({ channel: "hack" }).channel).toBeNull();
   });
 
+  it("허용된 빈도·매출 라벨만 수용", () => {
+    expect(parseCustomerFilters({ frequencyLabel: "단골" }).frequencyLabel).toBe(
+      "단골",
+    );
+    expect(parseCustomerFilters({ frequencyLabel: "일반" }).frequencyLabel).toBeNull();
+    expect(parseCustomerFilters({ revenueLabel: "VIP" }).revenueLabel).toBe("VIP");
+    expect(parseCustomerFilters({ revenueLabel: "다이아" }).revenueLabel).toBeNull();
+  });
+
   it("방문일 구간: 유효한 날짜만 수용", () => {
     const p = parseCustomerFilters({
       visitFrom: "2026-08-01",
@@ -81,11 +90,15 @@ describe("buildCustomerSearchParams", () => {
       filters({
         q: "김",
         purpose: "GOLD_BAR",
+        frequencyLabel: "단골",
+        revenueLabel: "VIP",
         visitFrom: "2026-08-01",
       }),
     );
     expect(qs.get("q")).toBe("김");
     expect(qs.get("purpose")).toBe("GOLD_BAR");
+    expect(qs.get("frequencyLabel")).toBe("단골");
+    expect(qs.get("revenueLabel")).toBe("VIP");
     expect(qs.get("visitFrom")).toBe("2026-08-01");
     expect(qs.has("channel")).toBe(false);
     expect(qs.has("visitTo")).toBe(false);
@@ -112,5 +125,7 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters(filters({ q: "김" }))).toBe(true);
     expect(hasActiveFilters(filters({ visitFrom: "2026-08-01" }))).toBe(true);
     expect(hasActiveFilters(filters({ visitTo: "2026-08-31" }))).toBe(true);
+    expect(hasActiveFilters(filters({ frequencyLabel: "단골" }))).toBe(true);
+    expect(hasActiveFilters(filters({ revenueLabel: "VIP" }))).toBe(true);
   });
 });

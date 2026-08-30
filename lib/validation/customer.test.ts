@@ -15,7 +15,9 @@ const validBase = {
   address: "",
   inflow_channels: ["CARROT_MARKET", "KAKAO_MAP"],
   purchase_purposes: ["PURCHASE", "GOLD_BAR"],
-  grade: "",
+  frequency_label: "신규",
+  revenue_label: "일반",
+  referred_by_customer_id: "",
   registered_on: "2026-01-10",
   first_trade_date: "",
   last_contact_date: "",
@@ -42,7 +44,7 @@ describe("customerInputSchema", () => {
     expect(parsed.address).toBeNull();
     expect(parsed.first_trade_date).toBeNull();
     expect(parsed.last_contact_date).toBeNull();
-    expect(parsed.grade).toBeNull();
+    expect(parsed.referred_by_customer_id).toBeNull();
     expect(parsed.memo).toBeNull();
   });
 
@@ -51,13 +53,50 @@ describe("customerInputSchema", () => {
     expect(customerInputSchema.parse(rest).gender).toBe("UNKNOWN");
   });
 
-  it("올바른 등급을 통과시키고 알 수 없는 등급은 거부한다", () => {
+  it("빈도 라벨 기본값은 신규, 매출 라벨 기본값은 일반", () => {
+    const { frequency_label: _f, revenue_label: _r, ...rest } = validBase;
+    const parsed = customerInputSchema.parse(rest);
+    expect(parsed.frequency_label).toBe("신규");
+    expect(parsed.revenue_label).toBe("일반");
+  });
+
+  it("올바른 빈도 라벨을 통과시키고 알 수 없는 값은 거부한다", () => {
     expect(
-      customerInputSchema.parse({ ...validBase, grade: "VIP" }).grade,
+      customerInputSchema.parse({ ...validBase, frequency_label: "단골" })
+        .frequency_label,
+    ).toBe("단골");
+    expect(
+      customerInputSchema.safeParse({ ...validBase, frequency_label: "일반" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("올바른 매출 라벨을 통과시키고 알 수 없는 값은 거부한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, revenue_label: "VIP" })
+        .revenue_label,
     ).toBe("VIP");
     expect(
-      customerInputSchema.safeParse({ ...validBase, grade: "다이아" }).success,
+      customerInputSchema.safeParse({ ...validBase, revenue_label: "다이아" })
+        .success,
     ).toBe(false);
+  });
+
+  it("추천인 id 는 빈 문자열/NONE이면 null, 값이 있으면 그대로 통과한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, referred_by_customer_id: "" })
+        .referred_by_customer_id,
+    ).toBeNull();
+    expect(
+      customerInputSchema.parse({ ...validBase, referred_by_customer_id: "NONE" })
+        .referred_by_customer_id,
+    ).toBeNull();
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        referred_by_customer_id: "11111111-1111-1111-1111-111111111111",
+      }).referred_by_customer_id,
+    ).toBe("11111111-1111-1111-1111-111111111111");
   });
 
   it("이름이 공백만이면 거부한다", () => {

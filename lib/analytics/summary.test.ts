@@ -6,7 +6,8 @@ describe("normalizeCustomerAnalytics", () => {
     const a = normalizeCustomerAnalytics({
       customer_count: 18,
       gender_counts: { UNKNOWN: 2, MALE: 8, FEMALE: 8 },
-      grade_counts: { VIP: 3, 우수: 4, 일반: 5, 신규: 2, NONE: 4 },
+      frequency_counts: { 신규: 12, 단골: 6 },
+      revenue_counts: { 일반: 10, 우수: 5, VIP: 3 },
       channel_counts: { CARROT_MARKET: 3, WALK_IN: 5 },
       age_bucket_counts: { "20s": 4, "30s": 6, UNKNOWN: 2 },
       top_customers: [
@@ -15,8 +16,10 @@ describe("normalizeCustomerAnalytics", () => {
     });
     expect(a.customerCount).toBe(18);
     expect(a.genderCounts.MALE).toBe(8);
-    expect(a.gradeCounts.VIP).toBe(3);
-    expect(a.gradeCounts.NONE).toBe(4);
+    expect(a.frequencyCounts.신규).toBe(12);
+    expect(a.frequencyCounts.단골).toBe(6);
+    expect(a.revenueCounts.VIP).toBe(3);
+    expect(a.revenueCounts.일반).toBe(10);
     expect(a.channelCounts.CARROT_MARKET).toBe(3);
     expect(a.channelCounts.NAVER_PLACE).toBe(0);
     expect(a.ageBucketCounts["20s"]).toBe(4);
@@ -29,6 +32,8 @@ describe("normalizeCustomerAnalytics", () => {
     const a = normalizeCustomerAnalytics({});
     expect(a.customerCount).toBe(0);
     expect(a.genderCounts.MALE).toBe(0);
+    expect(a.frequencyCounts.단골).toBe(0);
+    expect(a.revenueCounts.VIP).toBe(0);
     expect(a.topCustomers).toEqual([]);
 
     expect(normalizeCustomerAnalytics(null).customerCount).toBe(0);

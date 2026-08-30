@@ -11,7 +11,7 @@ import {
 } from "@/lib/customers/recent-visit";
 
 const CUSTOMER_FIELDS =
-  "id, name, phone, email, birth_date, gender, address, inflow_channels, purchase_purposes, grade, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
+  "id, name, phone, email, birth_date, gender, address, inflow_channels, purchase_purposes, frequency_label, revenue_label, referred_by_customer_id, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
 
 /** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
 const LIST_COLUMNS = `${CUSTOMER_FIELDS}, trade_records(trade_date)`;
@@ -30,7 +30,9 @@ export type CustomerDetail = Pick<
   | "address"
   | "inflow_channels"
   | "purchase_purposes"
-  | "grade"
+  | "frequency_label"
+  | "revenue_label"
+  | "referred_by_customer_id"
   | "registered_on"
   | "first_trade_date"
   | "last_contact_date"
@@ -47,6 +49,8 @@ export type CustomerListItem = Pick<
   | "phone"
   | "inflow_channels"
   | "purchase_purposes"
+  | "frequency_label"
+  | "revenue_label"
   | "registered_on"
   | "first_trade_date"
   | "created_at"
@@ -117,6 +121,8 @@ export async function searchCustomers(
       phone: row.phone,
       inflow_channels: row.inflow_channels,
       purchase_purposes: row.purchase_purposes,
+      frequency_label: row.frequency_label,
+      revenue_label: row.revenue_label,
       registered_on: row.registered_on,
       first_trade_date: row.first_trade_date,
       created_at: row.created_at,
@@ -141,6 +147,14 @@ export async function searchCustomers(
       }
 
       if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
+        return false;
+      }
+
+      if (filters.frequencyLabel && c.frequency_label !== filters.frequencyLabel) {
+        return false;
+      }
+
+      if (filters.revenueLabel && c.revenue_label !== filters.revenueLabel) {
         return false;
       }
 
@@ -186,4 +200,27 @@ export async function getCustomerById(
 
   const row = data as unknown as RawRow | null;
   return { ok: true, data: row ? mapGenderRow(row) : null };
+}
+
+/** 추천인 이름 표시 등 가벼운 참조용 — id/name 만 조회한다. */
+export async function getCustomerBasicById(
+  id: string,
+): Promise<QueryResult<{ id: string; name: string } | null>> {
+  const supabase = await createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[customers] 추천인 조회 실패:", error.message);
+    return {
+      ok: false,
+      error: "고객 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  return { ok: true, data: (data as { id: string; name: string } | null) ?? null };
 }

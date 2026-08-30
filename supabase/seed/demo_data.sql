@@ -4,9 +4,10 @@
 -- ⚠️ 모든 데이터는 완전한 가상 정보다. 실제 개인정보가 아니다.
 --    이름은 전부 "데모 " 로 시작하고, 비고는 전부 "[DEMO]" 로 시작한다.
 --
--- 현재 스키마(0016 기준) 반영: 성별/등급/완료여부 필드, 거래구분·거래품목
--- 정수 코드화, customer_events(일정) 테이블. 방문 목적·유입 경로는 0008
--- 이후 어휘(PURCHASE/GOLD_BAR/STONE_PRODUCT/CUSTOM_JEWELRY/OTHER 등) 사용.
+-- 현재 스키마(0020 기준) 반영: 성별/완료여부 필드, 거래구분·거래품목 정수
+-- 코드화, customer_events(일정) 테이블, 빈도·매출 2축 라벨(frequency_label/
+-- revenue_label), 추천인(referred_by_customer_id). 방문 목적·유입 경로는
+-- 0008 이후 어휘(PURCHASE/GOLD_BAR/STONE_PRODUCT/CUSTOM_JEWELRY/OTHER 등) 사용.
 --
 -- 안전장치:
 --  1) 아래 v_raw 에 대상 테스트 사용자 UUID 를 넣지 않으면 실행이 중단된다.
@@ -56,11 +57,13 @@ begin
   -- 고객 18명
   --   fv = 첫 거래일자 (오늘로부터 N일 전, -1 이면 없음)
   --   lc = 마지막 연락일 (오늘로부터 N일 전, -1 이면 없음)
-  --   gender: 0=모름, 1=남성, 2=여성 / grade: VIP·우수·일반·신규·null(미지정)
+  --   gender: 0=모름, 1=남성, 2=여성
+  --   freq: 빈도 라벨(신규/단골, 실제 거래 건수와 맞춤) / rev: 매출 라벨(일반/우수/VIP, 수동 지정값)
   -- ================================================================
   insert into public.customers
     (id, owner_id, name, phone, gender, address, inflow_channels,
-     purchase_purposes, grade, registered_on, first_trade_date, last_contact_date, memo)
+     purchase_purposes, frequency_label, revenue_label, registered_on,
+     first_trade_date, last_contact_date, memo)
   select
     md5(v_uid::text || ':demo-customer:' || v.slug)::uuid,
     v_uid,
@@ -70,50 +73,65 @@ begin
     v.address,
     v.channels,
     v.purposes,
-    v.grade,
+    v.freq,
+    v.rev,
     v_today - v.reg,
     case when v.fv < 0 then null else v_today - v.fv end,
     case when v.lc < 0 then null else v_today - v.lc end,
     v.memo
   from (values
     ('c01','데모 강토리','010-9900-0001','FEMALE','대전 서구', array['REFERRAL'],
-       array['STONE_PRODUCT'], 'VIP', 40, 30, 30, '[DEMO] 돌반지 문의'),
+       array['STONE_PRODUCT'], '신규', 'VIP', 40, 30, 30, '[DEMO] 돌반지 문의'),
     ('c02','데모 남해린','010-9900-0002','FEMALE','대전 중구', array['NAVER_PLACE'],
-       array['STONE_PRODUCT'], null, 200, 190, 190, '[DEMO] 거래 없음 · 오래 미방문'),
+       array['STONE_PRODUCT'], '신규', '일반', 200, 190, 190, '[DEMO] 거래 없음 · 오래 미방문'),
     ('c03','데모 도하준','010-9900-0003','MALE','대전 유성구', array['CARROT_MARKET'],
-       array['STONE_PRODUCT','GOLD_BAR'], '우수', 90, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음'),
+       array['STONE_PRODUCT','GOLD_BAR'], '단골', '우수', 90, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음'),
     ('c04','데모 류가온','010-9900-0004','UNKNOWN', null, array['WALK_IN'],
-       array['STONE_PRODUCT','OTHER'], null, 100, 95, 95, '[DEMO] 복수 목적'),
+       array['STONE_PRODUCT','OTHER'], '신규', '일반', 100, 95, 95, '[DEMO] 복수 목적'),
     ('c05','데모 문서아','010-9900-0005','FEMALE','대전 대덕구', array['OTHER'],
-       array['STONE_PRODUCT','CUSTOM_JEWELRY'], '일반', 35, 20, 20, '[DEMO] 복수 목적'),
+       array['STONE_PRODUCT','CUSTOM_JEWELRY'], '신규', '일반', 35, 20, 20, '[DEMO] 복수 목적'),
     ('c06','데모 박도윤','010-9900-0006','MALE',null, array['NAVER_PLACE'],
-       array['GOLD_BAR'], 'VIP', 300, 100, 100, '[DEMO] 오래 미방문'),
+       array['GOLD_BAR'], '단골', 'VIP', 300, 100, 100, '[DEMO] 오래 미방문'),
     ('c07','데모 서지호','010-9900-0007','MALE',null, array['REFERRAL'],
-       array['GOLD_BAR'], '신규', 45, 10, 10, '[DEMO]'),
+       array['GOLD_BAR'], '신규', '일반', 45, 10, 10, '[DEMO]'),
     ('c08','데모 안유찬','010-9900-0008','MALE',null, array['CARROT_MARKET'],
-       array['GOLD_BAR','PURCHASE'], null, 220, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음 · 오래 미방문'),
+       array['GOLD_BAR','PURCHASE'], '단골', '일반', 220, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음 · 오래 미방문'),
     ('c09','데모 오세라','010-9900-0009','FEMALE',null, array['WALK_IN'],
-       array['GOLD_BAR'], '일반', 30, 5, 5, '[DEMO]'),
+       array['GOLD_BAR'], '신규', '일반', 30, 5, 5, '[DEMO]'),
     ('c10','데모 유하람','010-9900-0010','UNKNOWN',null, array['OTHER'],
-       array['GOLD_BAR'], null, 500, -1, -1, '[DEMO] 거래 없음 · 오래 미방문'),
+       array['GOLD_BAR'], '신규', '일반', 500, -1, -1, '[DEMO] 거래 없음 · 오래 미방문'),
     ('c11','데모 이준서','010-9900-0011','MALE',null, array['CARROT_MARKET'],
-       array['PURCHASE'], '신규', 50, 40, 40, '[DEMO]'),
+       array['PURCHASE'], '신규', '일반', 50, 40, 40, '[DEMO]'),
     ('c12','데모 임채원','010-9900-0012','FEMALE',null, array['NAVER_PLACE'],
-       array['PURCHASE'], '우수', 95, 60, 60, '[DEMO]'),
+       array['PURCHASE'], '단골', '우수', 95, 60, 60, '[DEMO]'),
     ('c13','데모 장시우','010-9900-0013','MALE',null, array['REFERRAL'],
-       array['PURCHASE'], null, 130, -1, -1, '[DEMO] 연락기록 없음'),
+       array['PURCHASE'], '단골', '일반', 130, -1, -1, '[DEMO] 연락기록 없음'),
     ('c14','데모 전보름','010-9900-0014','FEMALE',null, array['WALK_IN'],
-       array['PURCHASE','OTHER'], null, 40, 35, 35, '[DEMO] 복수 목적'),
+       array['PURCHASE','OTHER'], '신규', '일반', 40, 35, 35, '[DEMO] 복수 목적'),
     ('c15','데모 정해원','010-9900-0015','MALE',null, array['OTHER'],
-       array['PURCHASE'], 'VIP', 400, 380, 380, '[DEMO] 오래 미방문'),
+       array['PURCHASE'], '단골', 'VIP', 400, 380, 380, '[DEMO] 오래 미방문'),
     ('c16','데모 조가율','010-9900-0016','FEMALE',null, array['NAVER_PLACE'],
-       array['CUSTOM_JEWELRY'], '우수', 25, 15, 15, '[DEMO]'),
+       array['CUSTOM_JEWELRY'], '단골', '우수', 25, 15, 15, '[DEMO]'),
     ('c17','데모 채민재','010-9900-0017','MALE',null, array['REFERRAL'],
-       array['CUSTOM_JEWELRY'], null, 70, 55, 55, '[DEMO]'),
+       array['CUSTOM_JEWELRY'], '신규', '일반', 70, 55, 55, '[DEMO]'),
     ('c18','데모 한소율','010-9900-0018','FEMALE',null, array['CARROT_MARKET'],
-       array['CUSTOM_JEWELRY','GOLD_BAR'], '일반', 55, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음')
-  ) as v(slug, name, phone, gender, address, channels, purposes, grade, reg, fv, lc, memo)
+       array['CUSTOM_JEWELRY','GOLD_BAR'], '단골', '일반', 55, -1, -1, '[DEMO] 복수 목적 · 연락기록 없음')
+  ) as v(slug, name, phone, gender, address, channels, purposes, freq, rev, reg, fv, lc, memo)
   on conflict (id) do nothing;
+
+  -- 추천인 예시(자기참조 FK) — 고객 등록 후 별도 UPDATE로 연결한다.
+  update public.customers set referred_by_customer_id =
+    md5(v_uid::text || ':demo-customer:c01')::uuid
+    where id = md5(v_uid::text || ':demo-customer:c07')::uuid
+      and owner_id = v_uid;
+  update public.customers set referred_by_customer_id =
+    md5(v_uid::text || ':demo-customer:c03')::uuid
+    where id = md5(v_uid::text || ':demo-customer:c11')::uuid
+      and owner_id = v_uid;
+  update public.customers set referred_by_customer_id =
+    md5(v_uid::text || ':demo-customer:c05')::uuid
+    where id = md5(v_uid::text || ':demo-customer:c14')::uuid
+      and owner_id = v_uid;
 
   -- ================================================================
   -- 거래 24건 (거래구분/거래품목/완료여부는 정수 코드로 저장)

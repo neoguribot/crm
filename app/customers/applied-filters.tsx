@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import {
+  FREQUENCY_LABEL_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
 import {
   buildCustomerSearchParams,
   hasActiveFilters,
@@ -34,6 +39,20 @@ export function AppliedFilters({ filters }: { filters: CustomerFilters }) {
       key: "channel",
       label: `유입 경로: ${INFLOW_CHANNEL_LABELS[filters.channel]}`,
       next: { ...filters, channel: null },
+    });
+  }
+  if (filters.frequencyLabel) {
+    chips.push({
+      key: "frequencyLabel",
+      label: `빈도 라벨: ${FREQUENCY_LABEL_LABELS[filters.frequencyLabel]}`,
+      next: { ...filters, frequencyLabel: null },
+    });
+  }
+  if (filters.revenueLabel) {
+    chips.push({
+      key: "revenueLabel",
+      label: `매출 라벨: ${REVENUE_LABEL_LABELS[filters.revenueLabel]}`,
+      next: { ...filters, revenueLabel: null },
     });
   }
   if (filters.visitFrom || filters.visitTo) {

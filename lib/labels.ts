@@ -4,12 +4,13 @@
  */
 
 import type {
-  CustomerGrade,
   EventType,
+  FrequencyLabel,
   Gender,
   InflowChannel,
   ItemType,
   PurchasePurpose,
+  RevenueLabel,
   TradeStatus,
   TradeType,
 } from "@/lib/types/database";
@@ -73,11 +74,15 @@ export const GENDER_LABELS: Record<Gender, string> = {
   FEMALE: "여성",
 };
 
-export const CUSTOMER_GRADE_LABELS: Record<CustomerGrade, string> = {
-  VIP: "VIP",
-  우수: "우수",
-  일반: "일반",
+export const FREQUENCY_LABEL_LABELS: Record<FrequencyLabel, string> = {
   신규: "신규",
+  단골: "단골",
+};
+
+export const REVENUE_LABEL_LABELS: Record<RevenueLabel, string> = {
+  일반: "일반",
+  우수: "우수",
+  VIP: "VIP",
 };
 
 export const TRADE_STATUS_LABELS: Record<TradeStatus, string> = {

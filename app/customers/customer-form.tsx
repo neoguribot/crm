@@ -18,16 +18,18 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { todayInSeoul } from "@/lib/date";
 import {
-  CUSTOMER_GRADE_LABELS,
+  FREQUENCY_LABEL_LABELS,
   GENDER_LABELS,
   INFLOW_CHANNEL_LABELS,
   PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
 } from "@/lib/labels";
 import {
-  CUSTOMER_GRADES,
+  FREQUENCY_LABELS,
   GENDERS,
   INFLOW_CHANNELS,
   PURCHASE_PURPOSES,
+  REVENUE_LABELS,
 } from "@/lib/types/database";
 import { formatKoreanPhone } from "@/lib/phone";
 import type { CustomerDetail } from "@/lib/customers/queries";
@@ -46,6 +48,8 @@ type Props = {
   submitLabel: string;
   cancelHref: string;
   defaults?: CustomerDetail;
+  /** 추천인 선택 후보(자기 자신 제외, 수정 페이지에서는 호출 측에서 필터링). */
+  referrerCandidates?: { id: string; name: string; phone: string }[];
 };
 
 function FieldError({ message }: { message?: string }) {
@@ -106,6 +110,7 @@ export function CustomerForm({
   submitLabel,
   cancelHref,
   defaults,
+  referrerCandidates = [],
 }: Props) {
   const [state, formAction, pending] = useActionState(
     action,
@@ -135,8 +140,14 @@ export function CustomerForm({
   const [gender, setGender] = useState<string>(
     val("gender", defaults?.gender) || "UNKNOWN",
   );
-  const [grade, setGrade] = useState<string>(
-    val("grade", defaults?.grade ?? undefined),
+  const [frequencyLabel, setFrequencyLabel] = useState<string>(
+    val("frequency_label", defaults?.frequency_label) || "신규",
+  );
+  const [revenueLabel, setRevenueLabel] = useState<string>(
+    val("revenue_label", defaults?.revenue_label) || "일반",
+  );
+  const [referredBy, setReferredBy] = useState<string>(
+    val("referred_by_customer_id", defaults?.referred_by_customer_id ?? undefined),
   );
 
   return (
@@ -285,25 +296,73 @@ export function CustomerForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>등급 (선택)</Label>
+        <Label>빈도 라벨</Label>
         <Select
-          name="grade"
-          items={CUSTOMER_GRADE_LABELS}
-          value={grade || undefined}
-          onValueChange={(val) => setGrade(String(val))}
+          name="frequency_label"
+          items={FREQUENCY_LABEL_LABELS}
+          value={frequencyLabel}
+          onValueChange={(val) => setFrequencyLabel(String(val))}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="선택 안 함" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CUSTOMER_GRADES.map((code) => (
+            {FREQUENCY_LABELS.map((code) => (
               <SelectItem key={code} value={code}>
-                {CUSTOMER_GRADE_LABELS[code]}
+                {FREQUENCY_LABEL_LABELS[code]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <FieldError message={e.grade} />
+        <FieldError message={e.frequency_label} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>매출 라벨</Label>
+        <Select
+          name="revenue_label"
+          items={REVENUE_LABEL_LABELS}
+          value={revenueLabel}
+          onValueChange={(val) => setRevenueLabel(String(val))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {REVENUE_LABELS.map((code) => (
+              <SelectItem key={code} value={code}>
+                {REVENUE_LABEL_LABELS[code]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError message={e.revenue_label} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>추천인 (선택)</Label>
+        <Select
+          name="referred_by_customer_id"
+          items={Object.fromEntries([
+            ["NONE", "없음"],
+            ...referrerCandidates.map((c) => [c.id, `${c.name} (${c.phone})`]),
+          ])}
+          value={referredBy || "NONE"}
+          onValueChange={(val) => setReferredBy(val === "NONE" ? "" : String(val))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="NONE">없음</SelectItem>
+            {referrerCandidates.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name} ({c.phone})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError message={e.referred_by_customer_id} />
       </div>
 
       <div className="flex flex-col gap-1.5">

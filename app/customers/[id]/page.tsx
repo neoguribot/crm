@@ -10,22 +10,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatKoreanDate } from "@/lib/date";
-import { getCustomerById } from "@/lib/customers/queries";
-import { suggestGrade } from "@/lib/customers/grade-suggestion";
+import { formatKoreanDate, todayInSeoul } from "@/lib/date";
+import { getCustomerBasicById, getCustomerById } from "@/lib/customers/queries";
+import {
+  calendarMonthsWindowStart,
+  suggestFrequencyLabel,
+  suggestRevenueLabel,
+} from "@/lib/customers/label-suggestion";
+import { averageRevisitIntervalDays } from "@/lib/customers/revisit-interval";
 import { listTradeRecordsByCustomer } from "@/lib/trades/queries";
 import { listCustomerEvents } from "@/lib/events/queries";
 import {
-  CUSTOMER_GRADE_LABELS,
+  FREQUENCY_LABEL_LABELS,
   GENDER_LABELS,
   INFLOW_CHANNEL_LABELS,
   PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
 } from "@/lib/labels";
 import { summarizeHoldings, totalHoldingsWeight } from "@/lib/trades/holdings";
 import { getLatestGoldPrice, getPriceTarget } from "@/lib/prices/queries";
 import { requireUser } from "@/lib/supabase/require-user";
 import { EventsSection } from "@/app/customers/[id]/events-section";
 import { HoldingsSummary } from "@/app/customers/[id]/holdings-summary";
+import { MetricsCard } from "@/app/customers/[id]/metrics-card";
 import { PriceTargetCard } from "@/app/customers/[id]/price-target-card";
 import { ProfitCard } from "@/app/customers/[id]/profit-card";
 import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
@@ -82,12 +89,16 @@ export default async function CustomerDetailPage({
   }
 
   const c = result.data;
-  const [trades, targetResult, priceResult, eventsResult] = await Promise.all([
-    listTradeRecordsByCustomer(c.id),
-    getPriceTarget(c.id),
-    getLatestGoldPrice(),
-    listCustomerEvents(c.id),
-  ]);
+  const [trades, targetResult, priceResult, eventsResult, referrerResult] =
+    await Promise.all([
+      listTradeRecordsByCustomer(c.id),
+      getPriceTarget(c.id),
+      getLatestGoldPrice(),
+      listCustomerEvents(c.id),
+      c.referred_by_customer_id
+        ? getCustomerBasicById(c.referred_by_customer_id)
+        : Promise.resolve({ ok: true as const, data: null }),
+    ]);
   const holdings = trades.ok ? summarizeHoldings(trades.data) : [];
   const cumulativeSaleAmount = trades.ok
     ? trades.data
@@ -99,7 +110,21 @@ export default async function CustomerDetailPage({
         .filter((t) => t.trade_type === "PURCHASE")
         .reduce((sum, t) => sum + Number(t.amount || 0), 0)
     : 0;
-  const suggestedGrade = suggestGrade(cumulativeSaleAmount);
+  const cumulativeAmount = cumulativeSaleAmount + cumulativePurchaseAmount;
+  const totalTradeCount = trades.ok ? trades.data.length : 0;
+  const today = todayInSeoul();
+  const last3MonthsStart = calendarMonthsWindowStart(2, today);
+  const last3MonthsAmount = trades.ok
+    ? trades.data
+        .filter((t) => t.trade_date >= last3MonthsStart)
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+    : 0;
+  const suggestedFrequencyLabel = suggestFrequencyLabel(totalTradeCount);
+  const suggestedRevenueLabel = suggestRevenueLabel(last3MonthsAmount);
+  const averageRevisitDays = trades.ok
+    ? averageRevisitIntervalDays(trades.data.map((t) => t.trade_date))
+    : null;
+  const referrer = referrerResult.ok ? referrerResult.data : null;
   const priceTarget = targetResult.ok ? targetResult.data : null;
   const currentPricePerDon =
     priceResult.ok && priceResult.data
@@ -144,13 +169,35 @@ export default async function CustomerDetailPage({
           <Row label="주소" value={c.address ?? "없음"} />
           <Row label="유입 경로" value={channels} />
           <Row label="방문 목적" value={purposes} />
-          <Row label="등급">
+          <Row label="빈도 라벨">
             <span className="flex items-center gap-2">
-              {c.grade ? CUSTOMER_GRADE_LABELS[c.grade] : "미지정"}
+              {FREQUENCY_LABEL_LABELS[c.frequency_label]}
               <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                자동 추천: {CUSTOMER_GRADE_LABELS[suggestedGrade]}
+                자동 추천: {FREQUENCY_LABEL_LABELS[suggestedFrequencyLabel]}
+                (누적 {totalTradeCount}건)
               </span>
             </span>
+          </Row>
+          <Row label="매출 라벨">
+            <span className="flex items-center gap-2">
+              {REVENUE_LABEL_LABELS[c.revenue_label]}
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                자동 추천: {REVENUE_LABEL_LABELS[suggestedRevenueLabel]}
+                (최근 3개월 매출 기준)
+              </span>
+            </span>
+          </Row>
+          <Row label="추천인">
+            {referrer ? (
+              <Link
+                href={`/customers/${referrer.id}`}
+                className="text-sm text-primary hover:underline"
+              >
+                {referrer.name}
+              </Link>
+            ) : (
+              <span className="text-sm">없음</span>
+            )}
           </Row>
           <Row label="고객 등록일" value={formatKoreanDate(c.registered_on)} />
           <Row
@@ -168,6 +215,14 @@ export default async function CustomerDetailPage({
           <Row label="비고" value={c.memo ?? "없음"} />
         </CardContent>
       </Card>
+
+      <MetricsCard
+        cumulativeAmount={cumulativeAmount}
+        tradeCount={totalTradeCount}
+        averageRevisitDays={averageRevisitDays}
+        frequencyLabel={c.frequency_label}
+        revenueLabel={c.revenue_label}
+      />
 
       <PriceTargetCard
         customerId={c.id}
