@@ -25,11 +25,13 @@ export type DashboardSummary = {
   purposeCounts: Record<PurchasePurpose, number>;
   upcomingEventCount: number;
   recentTrades: RecentTrade[];
-  customerTradeCountToday: number;
-  customerTradeCountYesterday: number;
-  customerTradeCountWeek: number;
-  customerTradeCountMonth: number;
-  customerTradeCountYear: number;
+  tradeCountToday: number;
+  tradeCountYesterday: number;
+  tradeCountWeek: number;
+  tradeCountMonth: number;
+  tradeCountYear: number;
+  tradeCountInProgress: number;
+  tradeCountDone: number;
 };
 
 function toCount(value: unknown): number {
@@ -100,10 +102,12 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
     purposeCounts,
     upcomingEventCount: toCount(r.upcoming_event_count),
     recentTrades,
-    customerTradeCountToday: toCount(r.customer_trade_count_today),
-    customerTradeCountYesterday: toCount(r.customer_trade_count_yesterday),
-    customerTradeCountWeek: toCount(r.customer_trade_count_week),
-    customerTradeCountMonth: toCount(r.customer_trade_count_month),
-    customerTradeCountYear: toCount(r.customer_trade_count_year),
+    tradeCountToday: toCount(r.trade_count_today),
+    tradeCountYesterday: toCount(r.trade_count_yesterday),
+    tradeCountWeek: toCount(r.trade_count_week),
+    tradeCountMonth: toCount(r.trade_count_month),
+    tradeCountYear: toCount(r.trade_count_year),
+    tradeCountInProgress: toCount(r.trade_count_in_progress),
+    tradeCountDone: toCount(r.trade_count_done),
   };
 }

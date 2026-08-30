@@ -14,7 +14,9 @@ const validBase = {
   gender: "UNKNOWN",
   address: "",
   inflow_channels: ["CARROT_MARKET", "KAKAO_MAP"],
+  inflow_channel_detail: "",
   purchase_purposes: ["PURCHASE", "GOLD_BAR"],
+  purchase_purpose_detail: "",
   frequency_label: "신규",
   revenue_label: "일반",
   referred_by_customer_id: "",
@@ -122,11 +124,43 @@ describe("customerInputSchema", () => {
     ).toBe("hong@example.com");
   });
 
-  it("유입 경로를 1개 이상 선택해야 한다", () => {
+  it("유입 경로는 필수가 아니며 비워도 통과한다", () => {
+    const parsed = customerInputSchema.parse({ ...validBase, inflow_channels: [] });
+    expect(parsed.inflow_channels).toEqual([]);
+  });
+
+  it("유입 경로를 기타로 선택하면 세부 내용이 필요하다", () => {
     expect(
-      customerInputSchema.safeParse({ ...validBase, inflow_channels: [] })
-        .success,
+      customerInputSchema.safeParse({
+        ...validBase,
+        inflow_channels: ["OTHER"],
+        inflow_channel_detail: "",
+      }).success,
     ).toBe(false);
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        inflow_channels: ["OTHER"],
+        inflow_channel_detail: "지인 소개 블로그",
+      }).inflow_channel_detail,
+    ).toBe("지인 소개 블로그");
+  });
+
+  it("방문 목적을 기타로 선택하면 세부 내용이 필요하다", () => {
+    expect(
+      customerInputSchema.safeParse({
+        ...validBase,
+        purchase_purposes: ["OTHER"],
+        purchase_purpose_detail: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        purchase_purposes: ["OTHER"],
+        purchase_purpose_detail: "시계 수리 문의",
+      }).purchase_purpose_detail,
+    ).toBe("시계 수리 문의");
   });
 
   it("알 수 없는 유입 경로·방문 목적을 거부한다", () => {

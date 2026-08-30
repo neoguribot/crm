@@ -5,8 +5,8 @@ import { parseRemindFilter, remindFilterHref } from "@/lib/reminders/filters";
 describe("parseRemindFilter", () => {
   it("허용된 status 값을 그대로 반환", () => {
     expect(parseRemindFilter({ status: "OVERDUE" })).toBe("OVERDUE");
-    expect(parseRemindFilter({ status: "ALL_UPCOMING" })).toBe("ALL_UPCOMING");
-    expect(parseRemindFilter({ status: "NO_EVENT" })).toBe("NO_EVENT");
+    expect(parseRemindFilter({ status: "TODAY" })).toBe("TODAY");
+    expect(parseRemindFilter({ status: "WITHIN_7_DAYS" })).toBe("WITHIN_7_DAYS");
   });
 
   it("없거나 허용되지 않은 값은 null(기본 목록)", () => {
@@ -18,7 +18,7 @@ describe("parseRemindFilter", () => {
   });
 
   it("배열이면 첫 값만", () => {
-    expect(parseRemindFilter({ status: ["OVERDUE", "NO_EVENT"] })).toBe("OVERDUE");
+    expect(parseRemindFilter({ status: ["OVERDUE", "TODAY"] })).toBe("OVERDUE");
   });
 });
 

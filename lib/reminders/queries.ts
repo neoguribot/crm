@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { EventType, PurchasePurpose } from "@/lib/types/database";
+import type { EventType } from "@/lib/types/database";
 import { codeToEventType } from "@/lib/types/codes";
 import { todayInSeoul } from "@/lib/date";
 import type { QueryResult } from "@/lib/customers/queries";
@@ -15,18 +15,16 @@ import {
 } from "@/lib/reminders/status";
 
 /** 리마인드 화면에 필요한 컬럼만. 완료 처리된 일정은 대상에서 제외. */
-const COLUMNS = "id, event_type, event_date, customers(id, name, phone, purchase_purposes, last_contact_date)";
+const COLUMNS = "id, event_type, event_date, memo, customers(id, name)";
 
 type RawRow = {
   id: string;
   event_type: number;
   event_date: string;
+  memo: string | null;
   customers: {
     id: string;
     name: string;
-    phone: string;
-    purchase_purposes: PurchasePurpose[];
-    last_contact_date: string | null;
   } | null;
 };
 
@@ -36,9 +34,7 @@ export type ReminderEvent = {
   event_date: string;
   customer_id: string;
   name: string;
-  phone: string;
-  purchase_purposes: PurchasePurpose[];
-  last_contact_date: string | null;
+  memo: string | null;
   status: RemindStatus;
   dayDelta: number | null;
 };
@@ -90,9 +86,7 @@ export async function getReminderData(
       event_date: row.event_date,
       customer_id: row.customers.id,
       name: row.customers.name,
-      phone: row.customers.phone,
-      purchase_purposes: row.customers.purchase_purposes,
-      last_contact_date: row.customers.last_contact_date,
+      memo: row.memo,
       status: classifyRemindStatus(row.event_date, today),
       dayDelta: remindDayDelta(row.event_date, today),
     }));

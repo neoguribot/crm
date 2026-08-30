@@ -124,7 +124,9 @@ export interface Customer {
   gender: Gender;
   address: string | null;
   inflow_channels: InflowChannel[];
+  inflow_channel_detail: string | null;
   purchase_purposes: PurchasePurpose[];
+  purchase_purpose_detail: string | null;
   frequency_label: FrequencyLabel;
   revenue_label: RevenueLabel;
   referred_by_customer_id: string | null;
@@ -237,7 +239,9 @@ export interface CustomerCreateInput {
   gender?: Gender;
   address?: string | null;
   inflow_channels: InflowChannel[];
+  inflow_channel_detail?: string | null;
   purchase_purposes: PurchasePurpose[];
+  purchase_purpose_detail?: string | null;
   frequency_label?: FrequencyLabel;
   revenue_label?: RevenueLabel;
   referred_by_customer_id?: string | null;

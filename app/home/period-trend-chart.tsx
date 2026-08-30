@@ -84,11 +84,11 @@ export function PeriodTrendChart({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm bg-primary/30" />
-          거래 고객수 <span className="text-foreground">{totalTrade.toLocaleString("ko-KR")}건</span>
+          거래 수 <span className="text-foreground">{totalTrade.toLocaleString("ko-KR")}건</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="inline-block h-0.5 w-4 rounded-full bg-primary" />
-          신규 등록 <span className="text-foreground">{totalReg.toLocaleString("ko-KR")}명</span>
+          신규 등록 고객수 <span className="text-foreground">{totalReg.toLocaleString("ko-KR")}명</span>
         </span>
       </div>
 
@@ -97,7 +97,7 @@ export function PeriodTrendChart({
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full min-w-[440px]"
           role="img"
-          aria-label="기간별 거래 고객수와 신규 등록 고객수 추이"
+          aria-label="기간별 거래 수와 신규 등록 고객수 추이"
         >
           {/* 가로 눈금선 + y 라벨 */}
           {gridLines.map((g) => (

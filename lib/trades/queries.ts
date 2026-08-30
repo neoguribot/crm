@@ -78,6 +78,8 @@ export type TradeSearchFilters = {
   q?: string;
   tradeType?: TradeType;
   status?: TradeStatus;
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 export type TradeRecordSearchItem = TradeRecordListItem & {
@@ -128,6 +130,8 @@ export async function searchTradeRecords(
   const filtered = mapped.filter((t) => {
     if (filters.tradeType && t.trade_type !== filters.tradeType) return false;
     if (filters.status && t.status !== filters.status) return false;
+    if (filters.dateFrom && t.trade_date < filters.dateFrom) return false;
+    if (filters.dateTo && t.trade_date > filters.dateTo) return false;
     if (filters.q) {
       const q = filters.q.trim();
       if (q) {

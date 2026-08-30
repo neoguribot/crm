@@ -70,10 +70,10 @@ export const customerInputSchema = z
     birth_date: optionalIsoDate,
     gender: z.enum(GENDERS).default("UNKNOWN"),
     address: optionalText(ADDRESS_MAX, "주소"),
-    inflow_channels: z
-      .array(z.enum(INFLOW_CHANNELS))
-      .min(1, "유입 경로를 1개 이상 선택해 주세요."),
+    inflow_channels: z.array(z.enum(INFLOW_CHANNELS)).default([]),
+    inflow_channel_detail: optionalText(MEMO_MAX, "유입 경로 기타 세부 내용"),
     purchase_purposes: z.array(z.enum(PURCHASE_PURPOSES)).default([]),
+    purchase_purpose_detail: optionalText(MEMO_MAX, "방문 목적 기타 세부 내용"),
     frequency_label: z.enum(FREQUENCY_LABELS).default("신규"),
     revenue_label: z.enum(REVENUE_LABELS).default("일반"),
     referred_by_customer_id: z
@@ -104,6 +104,21 @@ export const customerInputSchema = z
         });
       }
     }
+
+    if (val.inflow_channels.includes("OTHER") && !val.inflow_channel_detail) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["inflow_channel_detail"],
+        message: "유입 경로를 기타로 선택하면 세부 내용을 입력해 주세요.",
+      });
+    }
+    if (val.purchase_purposes.includes("OTHER") && !val.purchase_purpose_detail) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["purchase_purpose_detail"],
+        message: "방문 목적을 기타로 선택하면 세부 내용을 입력해 주세요.",
+      });
+    }
   });
 
 export type CustomerInput = z.infer<typeof customerInputSchema>;
@@ -118,7 +133,9 @@ export function customerFormDataToObject(formData: FormData) {
     gender: String(formData.get("gender") ?? "UNKNOWN"),
     address: String(formData.get("address") ?? ""),
     inflow_channels: formData.getAll("inflow_channels").map(String),
+    inflow_channel_detail: String(formData.get("inflow_channel_detail") ?? ""),
     purchase_purposes: formData.getAll("purchase_purposes").map(String),
+    purchase_purpose_detail: String(formData.get("purchase_purpose_detail") ?? ""),
     frequency_label: String(formData.get("frequency_label") ?? "신규"),
     revenue_label: String(formData.get("revenue_label") ?? "일반"),
     referred_by_customer_id: String(formData.get("referred_by_customer_id") ?? ""),

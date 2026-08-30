@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useActionState, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
+import { CalendarDateField } from "@/components/ui/calendar-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -127,7 +127,7 @@ export function TradeForm({
         <Label htmlFor="trade_date">
           거래일 <span className="text-destructive">*</span>
         </Label>
-        <DateInput
+        <CalendarDateField
           id="trade_date"
           name="trade_date"
           defaultValue={val("trade_date")}

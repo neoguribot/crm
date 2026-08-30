@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatKoreanDate } from "@/lib/date";
+import { formatKoreanDate, isValidIsoDate } from "@/lib/date";
 import { formatWon } from "@/lib/number";
 import {
   ITEM_TYPE_LABELS,
@@ -29,6 +30,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+const ALL = "ALL";
+
 export default async function TransactionsPage({
   searchParams,
 }: {
@@ -40,8 +43,12 @@ export default async function TransactionsPage({
   const q = typeof sp.q === "string" ? sp.q : "";
   const tradeType = TRADE_TYPES.find((t) => t === sp.trade_type);
   const status = TRADE_STATUSES.find((s) => s === sp.status);
+  const dateFromRaw = typeof sp.date_from === "string" ? sp.date_from : "";
+  const dateToRaw = typeof sp.date_to === "string" ? sp.date_to : "";
+  const dateFrom = isValidIsoDate(dateFromRaw) ? dateFromRaw : "";
+  const dateTo = isValidIsoDate(dateToRaw) ? dateToRaw : "";
 
-  const result = await searchTradeRecords({ q, tradeType, status });
+  const result = await searchTradeRecords({ q, tradeType, status, dateFrom, dateTo });
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
@@ -62,11 +69,12 @@ export default async function TransactionsPage({
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm text-muted-foreground">거래구분</label>
-          <Select name="trade_type" items={TRADE_TYPE_LABELS} defaultValue={tradeType}>
+          <Select name="trade_type" items={TRADE_TYPE_LABELS} defaultValue={tradeType ?? ALL}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="전체" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={ALL}>전체</SelectItem>
               {TRADE_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>
                   {TRADE_TYPE_LABELS[t]}
@@ -77,11 +85,12 @@ export default async function TransactionsPage({
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm text-muted-foreground">완료 여부</label>
-          <Select name="status" items={TRADE_STATUS_LABELS} defaultValue={status}>
+          <Select name="status" items={TRADE_STATUS_LABELS} defaultValue={status ?? ALL}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="전체" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={ALL}>전체</SelectItem>
               {TRADE_STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
                   {TRADE_STATUS_LABELS[s]}
@@ -90,8 +99,20 @@ export default async function TransactionsPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="date_from" className="text-sm text-muted-foreground">
+            거래일 시작
+          </label>
+          <DateInput id="date_from" name="date_from" defaultValue={dateFrom} className="w-32" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="date_to" className="text-sm text-muted-foreground">
+            거래일 종료
+          </label>
+          <DateInput id="date_to" name="date_to" defaultValue={dateTo} className="w-32" />
+        </div>
         <Button type="submit">검색</Button>
-        {q || tradeType || status ? (
+        {q || tradeType || status || dateFrom || dateTo ? (
           <Button type="button" variant="outline" render={<Link href="/transactions" />}>
             초기화
           </Button>
@@ -114,28 +135,40 @@ export default async function TransactionsPage({
         <ul className="flex flex-col gap-2">
           {result.data.map((t) => (
             <li key={t.id}>
-              <Link href={`/transactions/${t.id}`}>
-                <Card className="transition-colors hover:bg-muted/50">
-                  <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={t.trade_type === "SALE" ? "secondary" : "outline"}>
-                        {TRADE_TYPE_LABELS[t.trade_type]}
-                      </Badge>
-                      <Badge variant="outline">{TRADE_STATUS_LABELS[t.status]}</Badge>
-                      <span className="font-medium">{t.customer_name}</span>
-                      <span className="text-muted-foreground">
-                        {ITEM_TYPE_LABELS[t.item_type]}
+              <Card>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatKoreanDate(t.trade_date)}
+                    </span>
+                    <Badge variant={t.trade_type === "SALE" ? "secondary" : "outline"}>
+                      {TRADE_TYPE_LABELS[t.trade_type]}
+                    </Badge>
+                    <Badge variant="outline">{TRADE_STATUS_LABELS[t.status]}</Badge>
+                    <span className="font-medium">{t.customer_name}</span>
+                    <span className="text-muted-foreground">
+                      {ITEM_TYPE_LABELS[t.item_type]}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {t.unit_price ? `${formatWon(t.unit_price)}/` : ""}
+                      {t.weight}g
+                    </span>
+                    <span className="tabular-nums font-medium">{formatWon(t.amount)}</span>
+                    {t.memo ? (
+                      <span className="max-w-40 truncate text-xs text-muted-foreground">
+                        {t.memo}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="tabular-nums">{formatWon(t.amount)}</span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {formatKoreanDate(t.trade_date)}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    ) : null}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    render={<Link href={`/transactions/${t.id}`} />}
+                  >
+                    수정
+                  </Button>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>

@@ -49,78 +49,82 @@ export default async function AnalyticsPage() {
       ) : (
         <>
           <section className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>성별 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={GENDERS.map((g) => ({
-                    label: GENDER_LABELS[g],
-                    count: result.data.genderCounts[g],
-                  }))}
-                />
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>성별 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={GENDERS.map((g) => ({
+                      label: GENDER_LABELS[g],
+                      count: result.data.genderCounts[g],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>빈도 라벨 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={FREQUENCY_LABELS.map((f) => ({
-                    label: FREQUENCY_LABEL_LABELS[f],
-                    count: result.data.frequencyCounts[f],
-                  }))}
-                />
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>연령대 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={AGE_BUCKETS.map((a) => ({
+                      label: AGE_BUCKET_LABELS[a],
+                      count: result.data.ageBucketCounts[a],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>매출 라벨 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={REVENUE_LABELS.map((r) => ({
-                    label: REVENUE_LABEL_LABELS[r],
-                    count: result.data.revenueCounts[r],
-                  }))}
-                />
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>유입 경로 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={INFLOW_CHANNELS.map((c) => ({
+                      label: INFLOW_CHANNEL_LABELS[c],
+                      count: result.data.channelCounts[c],
+                    }))}
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    한 고객이 여러 경로를 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>연령대 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={AGE_BUCKETS.map((a) => ({
-                    label: AGE_BUCKET_LABELS[a],
-                    count: result.data.ageBucketCounts[a],
-                  }))}
-                />
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>빈도 라벨 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={FREQUENCY_LABELS.map((f) => ({
+                      label: FREQUENCY_LABEL_LABELS[f],
+                      count: result.data.frequencyCounts[f],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>유입 경로 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={INFLOW_CHANNELS.map((c) => ({
-                    label: INFLOW_CHANNEL_LABELS[c],
-                    count: result.data.channelCounts[c],
-                  }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  한 고객이 여러 경로를 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다.
-                </p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>매출 라벨 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={REVENUE_LABELS.map((r) => ({
+                      label: REVENUE_LABEL_LABELS[r],
+                      count: result.data.revenueCounts[r],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </section>
 
           <Card>

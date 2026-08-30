@@ -103,6 +103,9 @@ export default async function HomePage({
       getCurrentAppUser(),
     ]);
   const monthLabel = currentMonthLabelInSeoul();
+  const monthTotalAmount = result.ok
+    ? String(Number(result.data.monthSaleAmount) + Number(result.data.monthPurchaseAmount))
+    : "0";
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
@@ -123,28 +126,57 @@ export default async function HomePage({
         </Card>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard
-              label="오늘 거래 고객"
-              value={`${result.data.customerTradeCountToday.toLocaleString("ko-KR")}명`}
-            />
-            <StatCard
-              label="어제 거래 고객"
-              value={`${result.data.customerTradeCountYesterday.toLocaleString("ko-KR")}명`}
-            />
-            <StatCard
-              label="이번 주 누적"
-              value={`${result.data.customerTradeCountWeek.toLocaleString("ko-KR")}명`}
-            />
-            <StatCard
-              label="이번 달 누적"
-              value={`${result.data.customerTradeCountMonth.toLocaleString("ko-KR")}명`}
-            />
-            <StatCard
-              label="올해 누적"
-              value={`${result.data.customerTradeCountYear.toLocaleString("ko-KR")}명`}
-            />
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>거래 수 현황</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                <div>
+                  <dt className="text-sm text-muted-foreground">오늘</dt>
+                  <dd className="text-2xl font-semibold tabular-nums">
+                    {result.data.tradeCountToday.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-muted-foreground">어제</dt>
+                  <dd className="text-2xl font-semibold tabular-nums">
+                    {result.data.tradeCountYesterday.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-muted-foreground">진행 중</dt>
+                  <dd className="text-2xl font-semibold tabular-nums">
+                    {result.data.tradeCountInProgress.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-muted-foreground">완료</dt>
+                  <dd className="text-2xl font-semibold tabular-nums">
+                    {result.data.tradeCountDone.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">이번 주</dt>
+                  <dd className="text-base font-medium tabular-nums">
+                    {result.data.tradeCountWeek.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">이번 달</dt>
+                  <dd className="text-base font-medium tabular-nums">
+                    {result.data.tradeCountMonth.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">올해</dt>
+                  <dd className="text-base font-medium tabular-nums">
+                    {result.data.tradeCountYear.toLocaleString("ko-KR")}건
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
 
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
@@ -161,19 +193,14 @@ export default async function HomePage({
               value={formatWon(result.data.monthPurchaseAmount)}
             />
             <StatCard
-              label={`${monthLabel} 총합`}
-              value={formatWon(
-                String(
-                  Number(result.data.monthSaleAmount) +
-                    Number(result.data.monthPurchaseAmount),
-                ),
-              )}
+              label={`${monthLabel} 총 매출액`}
+              value={formatWon(monthTotalAmount)}
             />
           </section>
 
           <GoalCard
             monthLabel={monthLabel}
-            currentAmount={result.data.monthSaleAmount}
+            currentAmount={monthTotalAmount}
             goal={appUser.ok ? (appUser.data?.monthly_sales_goal ?? null) : null}
           />
 
@@ -206,17 +233,11 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {tradePeriod.ok && registrationPeriod.ok ? (
-                <>
-                  <PeriodTrendChart
-                    granularity={granularity}
-                    trade={tradePeriod.data}
-                    registration={registrationPeriod.data}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    막대 = 거래 고객수(거래 1건을 1명으로 셈, 반복 거래 중복) ·
-                    선 = 신규 등록 고객수(등록일 기준)
-                  </p>
-                </>
+                <PeriodTrendChart
+                  granularity={granularity}
+                  trade={tradePeriod.data}
+                  registration={registrationPeriod.data}
+                />
               ) : (
                 <p className="py-4 text-center text-sm text-destructive">
                   {!tradePeriod.ok
