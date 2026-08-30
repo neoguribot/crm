@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatKoreanDate } from "@/lib/date";
-import { itemTypeLabel, TRADE_TYPE_LABELS } from "@/lib/labels";
+import { itemTypeLabel, TRADE_STATUS_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
 import { formatWon, trimTrailingZeros } from "@/lib/number";
 import type { QueryResult } from "@/lib/customers/queries";
 import type { TradeRecordListItem } from "@/lib/trades/queries";
@@ -69,7 +69,9 @@ export function TradeHistorySection({
                   <th scope="col" className="py-2 pr-3 text-right font-medium">
                     총 금액
                   </th>
+                  <th scope="col" className="py-2 pr-3 font-medium">완료 여부</th>
                   <th scope="col" className="py-2 font-medium">비고</th>
+                  <th scope="col" className="py-2 pr-0 font-medium sr-only">관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,8 +101,19 @@ export function TradeHistorySection({
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {formatWon(t.amount)}
                     </td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      {TRADE_STATUS_LABELS[t.status]}
+                    </td>
                     <td className="py-2 whitespace-pre-wrap">
                       {t.memo ?? "-"}
+                    </td>
+                    <td className="py-2 pr-0 whitespace-nowrap text-right">
+                      <Link
+                        href={`/transactions/${t.id}`}
+                        className="text-xs text-muted-foreground hover:underline"
+                      >
+                        수정
+                      </Link>
                     </td>
                   </tr>
                 ))}

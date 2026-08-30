@@ -13,6 +13,7 @@ const base = {
   unit_price: "155000",
   amount: "581250",
   weight: "3.75",
+  status: "DONE",
   trade_date: "2026-01-10",
   memo: "",
 };
@@ -137,6 +138,16 @@ describe("tradeRecordInputSchema", () => {
   it("중량 소수 4자리를 거부한다", () => {
     expect(
       tradeRecordInputSchema.safeParse({ ...base, weight: "3.7501" }).success,
+    ).toBe(false);
+  });
+
+  it("완료 여부를 통과시키고 잘못된 값은 거부한다", () => {
+    expect(
+      tradeRecordInputSchema.parse({ ...base, status: "IN_PROGRESS" }).status,
+    ).toBe("IN_PROGRESS");
+    expect(
+      tradeRecordInputSchema.safeParse({ ...base, status: "CANCELLED" })
+        .success,
     ).toBe(false);
   });
 

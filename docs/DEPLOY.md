@@ -73,9 +73,9 @@ https://<프로젝트>-*.vercel.app/**      ← Preview 배포 (와일드카드)
 | 항목 | 상태 |
 | --- | --- |
 | `proxy.ts` (Next.js 16, 구 middleware) | Vercel 에서 각 요청 전에 실행됨. `@supabase/ssr` 표준 패턴으로 세션 쿠키 갱신 |
-| 보호 페이지 (`/dashboard`, `/customers/**`, `/reminders`) | `requireUser()` + `cookies()` 사용 → 항상 요청 시 렌더(동적). `next build` 출력에서 `ƒ (Dynamic)` 확인 |
-| `/dashboard`, `/reminders` | `export const dynamic = "force-dynamic"` 명시 → 사용자별 데이터가 정적 캐시로 공유되지 않음 |
-| `/` (홈) | `force-dynamic` + `getUser()` → 로그인 시 `/pipeline` 로 리다이렉트 |
+| 보호 페이지 (`/home`, `/customers/**`, `/transactions/**`, `/prices`, `/calendar`, `/analytics`) | `requireUser()` + `cookies()` 사용 → 항상 요청 시 렌더(동적). `next build` 출력에서 `ƒ (Dynamic)` 확인 |
+| `/home`, `/prices`, `/calendar`, `/analytics`, `/transactions` | `export const dynamic = "force-dynamic"` 명시 → 사용자별 데이터가 정적 캐시로 공유되지 않음 |
+| `/` (랜딩) | `getUser()` → 로그인 시 `/home` 로 리다이렉트 |
 | `/login` | 정적 (`○`). 폼 제출은 Server Action |
 | 서버 전용 코드 | `lib/**/queries.ts` 는 `import "server-only"`. `service_role` 미사용 |
 
@@ -94,12 +94,12 @@ https://<프로젝트>-*.vercel.app/**      ← Preview 배포 (와일드카드)
 | --- | --- | --- |
 | 1 | 배포 URL 접속 (로그아웃 상태) | `/login` 또는 홈 → 로그인 화면 |
 | 2 | 잘못된 계정으로 로그인 | "이메일 또는 비밀번호가 올바르지 않습니다." |
-| 3 | 정상 로그인 | `/dashboard`, 상단 네비게이션 표시 |
-| 4 | 대시보드 수치 | 샘플 기준값(`docs/DEMO_DATA.md §6`)과 일치 |
-| 5 | 네비게이션 대시보드/고객관리/리마인드 이동 | 정상, 현재 위치 강조 |
+| 3 | 정상 로그인 | `/home`, 상단 네비게이션 표시 |
+| 4 | 홈 대시보드 수치 | 샘플 기준값(`docs/DEMO_DATA.md §7`)과 일치 |
+| 5 | 네비게이션 홈/고객관리/거래관리/시세관리/캘린더/종합분석 이동 | 정상, 현재 위치 강조 |
 | 6 | 고객 등록 → 거래 등록 | 저장·이동 정상, 새로고침 후 유지 |
 | 7 | 고객 검색·필터·조합 | `docs/INTEGRATION_CHECKLIST.md D` |
-| 8 | 리마인드 탭 전환 | `docs/INTEGRATION_CHECKLIST.md G` |
+| 8 | 홈 일정 위젯 탭 전환 | `docs/INTEGRATION_CHECKLIST.md C6` |
 | 9 | 로그아웃 → 보호 URL 직접 접근 | `/login` 으로 이동 |
 | 10 | 존재하지 않는 `/customers/<임의 UUID>` | 404 페이지 |
 | 11 | 브라우저 콘솔 | Supabase 키/내부 오류 노출 없음 (anon 키는 정상 노출) |

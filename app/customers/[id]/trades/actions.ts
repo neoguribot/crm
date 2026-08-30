@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  itemTypeToCode,
+  tradeStatusToCode,
+  tradeTypeToCode,
+} from "@/lib/types/codes";
 import { flattenFieldErrors } from "@/lib/validation/flatten";
 import {
   tradeRecordFormDataToObject,
@@ -65,12 +70,13 @@ export async function createTradeRecord(
   // numeric 값은 검증된 문자열 그대로 전달(정밀도 유지).
   const { error } = await supabase.from("trade_records").insert({
     customer_id: customer.id,
-    trade_type: parsed.data.trade_type,
-    item_type: parsed.data.item_type,
+    trade_type: tradeTypeToCode(parsed.data.trade_type),
+    item_type: itemTypeToCode(parsed.data.item_type),
     item_detail: parsed.data.item_detail,
     unit_price: parsed.data.unit_price,
     weight: parsed.data.weight,
     amount: parsed.data.amount,
+    status: tradeStatusToCode(parsed.data.status),
     trade_date: parsed.data.trade_date,
     memo: parsed.data.memo,
   });

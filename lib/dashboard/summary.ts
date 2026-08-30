@@ -1,16 +1,18 @@
 import {
   PURCHASE_PURPOSES,
+  type ItemType,
   type PurchasePurpose,
   type TradeType,
 } from "@/lib/types/database";
+import { codeToItemType, codeToTradeType } from "@/lib/types/codes";
 
 export type RecentTrade = {
   id: string;
   customer_id: string;
   customer_name: string;
   trade_type: TradeType;
-  /** 품목 코드 (0007 이후 text). 표시는 itemTypeLabel() 로. */
-  item_type: string;
+  /** 품목 코드. 표시는 itemTypeLabel() 로. */
+  item_type: ItemType;
   /** numeric → 문자열 (정밀도 유지) */
   amount: string;
   trade_date: string;
@@ -23,6 +25,11 @@ export type DashboardSummary = {
   purposeCounts: Record<PurchasePurpose, number>;
   upcomingEventCount: number;
   recentTrades: RecentTrade[];
+  customerTradeCountToday: number;
+  customerTradeCountYesterday: number;
+  customerTradeCountWeek: number;
+  customerTradeCountMonth: number;
+  customerTradeCountYear: number;
 };
 
 function toCount(value: unknown): number {
@@ -37,9 +44,9 @@ function toAmountString(value: unknown): string {
   return "0";
 }
 
-const TRADE_TYPES_SET = new Set<TradeType>(["SALE", "PURCHASE"]);
-
-function isRecentTrade(value: unknown): value is RecentTrade {
+function isRawRecentTrade(
+  value: unknown,
+): value is { id: string; customer_id: string; customer_name: string; trade_date: string; trade_type: number; item_type: number } {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
@@ -47,7 +54,8 @@ function isRecentTrade(value: unknown): value is RecentTrade {
     typeof v.customer_id === "string" &&
     typeof v.customer_name === "string" &&
     typeof v.trade_date === "string" &&
-    TRADE_TYPES_SET.has(v.trade_type as TradeType)
+    typeof v.trade_type === "number" &&
+    typeof v.item_type === "number"
   );
 }
 
@@ -72,14 +80,14 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
 
   const recentTrades = Array.isArray(r.recent_trades)
     ? r.recent_trades
-        .filter(isRecentTrade)
+        .filter(isRawRecentTrade)
         .map((t) => ({
           id: t.id,
           customer_id: t.customer_id,
           customer_name: t.customer_name,
-          trade_type: t.trade_type,
-          item_type: String((t as Record<string, unknown>).item_type ?? ""),
-          amount: toAmountString((t as Record<string, unknown>).amount),
+          trade_type: codeToTradeType(t.trade_type),
+          item_type: codeToItemType(t.item_type),
+          amount: toAmountString((t as unknown as Record<string, unknown>).amount),
           trade_date: t.trade_date,
         }))
         .slice(0, 5)
@@ -92,5 +100,10 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
     purposeCounts,
     upcomingEventCount: toCount(r.upcoming_event_count),
     recentTrades,
+    customerTradeCountToday: toCount(r.customer_trade_count_today),
+    customerTradeCountYesterday: toCount(r.customer_trade_count_yesterday),
+    customerTradeCountWeek: toCount(r.customer_trade_count_week),
+    customerTradeCountMonth: toCount(r.customer_trade_count_month),
+    customerTradeCountYear: toCount(r.customer_trade_count_year),
   };
 }

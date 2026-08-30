@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { isValidIsoDate, todayInSeoul } from "@/lib/date";
-import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
+import {
+  CUSTOMER_GRADES,
+  GENDERS,
+  INFLOW_CHANNELS,
+  PURCHASE_PURPOSES,
+} from "@/lib/types/database";
 
 const MEMO_MAX = 1000;
 const ADDRESS_MAX = 200;
@@ -62,15 +67,24 @@ export const customerInputSchema = z
         "올바른 이메일 주소를 입력해 주세요.",
       ),
     birth_date: optionalIsoDate,
+    gender: z.enum(GENDERS).default("UNKNOWN"),
     address: optionalText(ADDRESS_MAX, "주소"),
     inflow_channels: z
       .array(z.enum(INFLOW_CHANNELS))
       .min(1, "유입 경로를 1개 이상 선택해 주세요."),
     purchase_purposes: z.array(z.enum(PURCHASE_PURPOSES)).default([]),
+    grade: z
+      .string()
+      .trim()
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .refine(
+        (v) => v === null || (CUSTOMER_GRADES as readonly string[]).includes(v),
+        "올바른 등급을 선택해 주세요.",
+      ) as z.ZodType<(typeof CUSTOMER_GRADES)[number] | null>,
     registered_on: isoDate,
     first_trade_date: optionalIsoDate,
     last_contact_date: optionalIsoDate,
-    next_event_date: optionalIsoDate,
     memo: optionalText(MEMO_MAX, "비고"),
   })
   .superRefine((val, ctx) => {
@@ -102,13 +116,14 @@ export function customerFormDataToObject(formData: FormData) {
     phone: String(formData.get("phone") ?? ""),
     email: String(formData.get("email") ?? ""),
     birth_date: String(formData.get("birth_date") ?? ""),
+    gender: String(formData.get("gender") ?? "UNKNOWN"),
     address: String(formData.get("address") ?? ""),
     inflow_channels: formData.getAll("inflow_channels").map(String),
     purchase_purposes: formData.getAll("purchase_purposes").map(String),
+    grade: String(formData.get("grade") ?? ""),
     registered_on: String(formData.get("registered_on") ?? ""),
     first_trade_date: String(formData.get("first_trade_date") ?? ""),
     last_contact_date: String(formData.get("last_contact_date") ?? ""),
-    next_event_date: String(formData.get("next_event_date") ?? ""),
     memo: String(formData.get("memo") ?? ""),
   };
 }

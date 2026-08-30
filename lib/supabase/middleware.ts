@@ -8,12 +8,11 @@ import { getSupabasePublicEnv } from "@/lib/supabase/env";
 /** 로그인이 필요한 경로 (접두어 일치) */
 const PROTECTED_PREFIXES = [
   "/home",
-  "/dashboard",
   "/customers",
-  "/pipeline",
-  "/trades",
-  "/segments",
-  "/reminders",
+  "/transactions",
+  "/prices",
+  "/calendar",
+  "/analytics",
 ];
 
 function isProtectedPath(pathname: string): boolean {

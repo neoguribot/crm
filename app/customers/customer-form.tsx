@@ -8,10 +8,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { todayInSeoul } from "@/lib/date";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
-import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
+import {
+  CUSTOMER_GRADE_LABELS,
+  GENDER_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+} from "@/lib/labels";
+import {
+  CUSTOMER_GRADES,
+  GENDERS,
+  INFLOW_CHANNELS,
+  PURCHASE_PURPOSES,
+} from "@/lib/types/database";
 import { formatKoreanPhone } from "@/lib/phone";
 import type { CustomerDetail } from "@/lib/customers/queries";
 import {
@@ -115,6 +132,12 @@ export function CustomerForm({
   );
   const registeredOnDefault =
     v?.registered_on ?? defaults?.registered_on ?? todayInSeoul();
+  const [gender, setGender] = useState<string>(
+    val("gender", defaults?.gender) || "UNKNOWN",
+  );
+  const [grade, setGrade] = useState<string>(
+    val("grade", defaults?.grade ?? undefined),
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -175,6 +198,25 @@ export function CustomerForm({
         />
         <FieldError message={e.birth_date} />
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">성별</legend>
+        <div className="flex gap-4">
+          {GENDERS.map((code) => (
+            <label key={code} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="gender"
+                value={code}
+                checked={gender === code}
+                onChange={() => setGender(code)}
+              />
+              {GENDER_LABELS[code]}
+            </label>
+          ))}
+        </div>
+        <FieldError message={e.gender} />
+      </fieldset>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="address">주소 (선택)</Label>
@@ -243,13 +285,25 @@ export function CustomerForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="next_event_date">다음 이벤트 예정일 (선택)</Label>
-        <DateInput
-          id="next_event_date"
-          name="next_event_date"
-          defaultValue={val("next_event_date", defaults?.next_event_date)}
-        />
-        <FieldError message={e.next_event_date} />
+        <Label>등급 (선택)</Label>
+        <Select
+          name="grade"
+          items={CUSTOMER_GRADE_LABELS}
+          value={grade || undefined}
+          onValueChange={(val) => setGrade(String(val))}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="선택 안 함" />
+          </SelectTrigger>
+          <SelectContent>
+            {CUSTOMER_GRADES.map((code) => (
+              <SelectItem key={code} value={code}>
+                {CUSTOMER_GRADE_LABELS[code]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError message={e.grade} />
       </div>
 
       <div className="flex flex-col gap-1.5">

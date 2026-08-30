@@ -12,12 +12,19 @@ import {
 } from "@/components/ui/card";
 import { formatKoreanDate } from "@/lib/date";
 import { getCustomerById } from "@/lib/customers/queries";
+import { suggestGrade } from "@/lib/customers/grade-suggestion";
 import { listTradeRecordsByCustomer } from "@/lib/trades/queries";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { listCustomerEvents } from "@/lib/events/queries";
+import {
+  CUSTOMER_GRADE_LABELS,
+  GENDER_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+} from "@/lib/labels";
 import { summarizeHoldings } from "@/lib/trades/holdings";
 import { getLatestGoldPrice, getPriceTarget } from "@/lib/prices/queries";
 import { requireUser } from "@/lib/supabase/require-user";
-import { CustomerStageControl } from "@/app/customers/[id]/customer-stage-control";
+import { EventsSection } from "@/app/customers/[id]/events-section";
 import { HoldingsSummary } from "@/app/customers/[id]/holdings-summary";
 import { PriceTargetCard } from "@/app/customers/[id]/price-target-card";
 import { TradeHistorySection } from "@/app/customers/[id]/trade-history";
@@ -74,12 +81,19 @@ export default async function CustomerDetailPage({
   }
 
   const c = result.data;
-  const [trades, targetResult, priceResult] = await Promise.all([
+  const [trades, targetResult, priceResult, eventsResult] = await Promise.all([
     listTradeRecordsByCustomer(c.id),
     getPriceTarget(c.id),
     getLatestGoldPrice(),
+    listCustomerEvents(c.id),
   ]);
   const holdings = trades.ok ? summarizeHoldings(trades.data) : [];
+  const cumulativeSaleAmount = trades.ok
+    ? trades.data
+        .filter((t) => t.trade_type === "SALE")
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+    : 0;
+  const suggestedGrade = suggestGrade(cumulativeSaleAmount);
   const priceTarget = targetResult.ok ? targetResult.data : null;
   const currentPricePerDon =
     priceResult.ok && priceResult.data
@@ -120,14 +134,18 @@ export default async function CustomerDetailPage({
             label="생년월일"
             value={c.birth_date ? formatKoreanDate(c.birth_date) : "없음"}
           />
+          <Row label="성별" value={GENDER_LABELS[c.gender]} />
           <Row label="주소" value={c.address ?? "없음"} />
           <Row label="유입 경로" value={channels} />
-          {c.stage ? (
-            <Row label="영업 단계">
-              <CustomerStageControl customerId={c.id} stage={c.stage} />
-            </Row>
-          ) : null}
           <Row label="방문 목적" value={purposes} />
+          <Row label="등급">
+            <span className="flex items-center gap-2">
+              {c.grade ? CUSTOMER_GRADE_LABELS[c.grade] : "미지정"}
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                자동 추천: {CUSTOMER_GRADE_LABELS[suggestedGrade]}
+              </span>
+            </span>
+          </Row>
           <Row label="고객 등록일" value={formatKoreanDate(c.registered_on)} />
           <Row
             label="첫 거래일자"
@@ -139,12 +157,6 @@ export default async function CustomerDetailPage({
             label="마지막 연락일"
             value={
               c.last_contact_date ? formatKoreanDate(c.last_contact_date) : "없음"
-            }
-          />
-          <Row
-            label="다음 이벤트 예정일"
-            value={
-              c.next_event_date ? formatKoreanDate(c.next_event_date) : "없음"
             }
           />
           <Row label="비고" value={c.memo ?? "없음"} />
@@ -168,6 +180,20 @@ export default async function CustomerDetailPage({
       {trades.ok ? <HoldingsSummary holdings={holdings} /> : null}
 
       <TradeHistorySection customerId={c.id} result={trades} />
+
+      <EventsSection
+        customerId={c.id}
+        events={eventsResult.ok ? eventsResult.data : []}
+        trades={
+          trades.ok
+            ? trades.data.map((t) => ({
+                id: t.id,
+                trade_date: t.trade_date,
+                item_detail: t.item_detail,
+              }))
+            : []
+        }
+      />
     </main>
   );
 }

@@ -34,7 +34,7 @@ export async function dismissNotification(
     console.error("[notifications] 닫기 실패:", error.message);
     return { ok: false };
   }
-  revalidatePath("/home");
+  revalidatePath("/prices");
   return { ok: true };
 }
 
@@ -53,7 +53,7 @@ export async function markNotificationRead(
     console.error("[notifications] 읽음 처리 실패:", error.message);
     return { ok: false };
   }
-  revalidatePath("/home");
+  revalidatePath("/prices");
   return { ok: true };
 }
 
@@ -69,7 +69,7 @@ export async function markAllNotificationsRead(): Promise<NotificationActionResu
     console.error("[notifications] 전체 읽음 실패:", error.message);
     return { ok: false };
   }
-  revalidatePath("/home");
+  revalidatePath("/prices");
   return { ok: true };
 }
 

@@ -13,7 +13,10 @@ export function parseRemindFilter(sp: RawSearchParams): RemindFilter | null {
   return null;
 }
 
-/** 필터를 `/reminders` 링크 href 로. 기본(null)은 파라미터 없이. */
-export function remindFilterHref(filter: RemindFilter | null): string {
-  return filter ? `/reminders?status=${filter}` : "/reminders";
+/** 필터를 링크 href 로. 기본(null)은 파라미터 없이. 홈 대시보드의 일정 위젯에서 쓴다. */
+export function remindFilterHref(
+  filter: RemindFilter | null,
+  basePath = "/home",
+): string {
+  return filter ? `${basePath}?status=${filter}` : basePath;
 }
