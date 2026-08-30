@@ -272,10 +272,10 @@ begin
   for i in 6..n loop
     if cust_channel[i] = 'REFERRAL' and random() < 0.6 then
       candidates := array(
-        select k from generate_series(1, i-1) k where cust_age[k] in ('40s','50s','60s')
+        select gk from generate_series(1, i-1) gk where cust_age[gk] in ('40s','50s','60s')
       );
       if array_length(candidates,1) is null then
-        candidates := array(select k from generate_series(1, i-1) k);
+        candidates := array(select gk from generate_series(1, i-1) gk);
       end if;
       v_pick := candidates[1 + floor(random() * array_length(candidates,1))::int];
       update public.customers set referred_by_customer_id = cust_id[v_pick]
@@ -413,7 +413,7 @@ begin
   -- 6단계: 고객 일정(customer_events) 약 16건 — 무작위로 고른 고객에게 배정.
   --   type: 1=문의 2=예약 3=맞춤주문 4=재방문 5=시세알림 6=생일 7=안부
   -- ================================================================
-  ev_targets := array(select i from generate_series(1, n) i order by random() limit 16);
+  ev_targets := array(select gk from generate_series(1, n) gk order by random() limit 16);
   k := 0;
   foreach i in array ev_targets loop
     k := k + 1;
