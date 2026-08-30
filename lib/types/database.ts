@@ -190,11 +190,11 @@ export interface PriceTarget {
 export const GOLD_PRICE_SOURCES = ["MANUAL", "API"] as const;
 export type GoldPriceSource = (typeof GOLD_PRICE_SOURCES)[number];
 
-/** 일자별 순금(24K) 시세, 1돈(3.75g) 기준. owner + price_date 유니크. */
+/** 순금(24K) 시세 이력, 1돈(3.75g) 기준. 등록할 때마다 새 행이 쌓인다. */
 export interface GoldPrice {
   id: string;
   owner_id: string;
-  price_date: IsoDateString;
+  registered_at: IsoTimestampString;
   price_per_don: NumericString;
   source: GoldPriceSource;
   created_at: IsoTimestampString;

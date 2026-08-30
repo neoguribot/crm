@@ -24,20 +24,17 @@ import {
   PERIOD_LABELS,
   periodHref,
 } from "@/lib/dashboard/period";
-import { getUpcomingEvents } from "@/lib/events/queries";
 import { getCurrentAppUser } from "@/lib/users/queries";
-import {
-  EVENT_TYPE_LABELS,
-  itemTypeLabel,
-  PURCHASE_PURPOSE_LABELS,
-  TRADE_TYPE_LABELS,
-} from "@/lib/labels";
+import { parseRemindFilter } from "@/lib/reminders/filters";
+import { getReminderData } from "@/lib/reminders/queries";
+import { itemTypeLabel, PURCHASE_PURPOSE_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { formatWon } from "@/lib/number";
 import { PURCHASE_PURPOSES } from "@/lib/types/database";
 import { requireUser } from "@/lib/supabase/require-user";
 import { PeriodTrendChart } from "@/app/home/period-trend-chart";
 import { GoalCard } from "@/app/home/goal-card";
+import { RemindersCard } from "@/app/home/reminders-card";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -95,13 +92,14 @@ export default async function HomePage({
   const granularity = parsePeriodGranularity(
     Array.isArray(sp.period) ? sp.period[0] : sp.period,
   );
+  const remindFilter = parseRemindFilter(sp);
 
-  const [result, tradePeriod, registrationPeriod, upcomingEvents, appUser] =
+  const [result, tradePeriod, registrationPeriod, reminderData, appUser] =
     await Promise.all([
       getDashboardSummary(),
       getCustomerCountByPeriod(granularity, "trade"),
       getCustomerCountByPeriod(granularity, "registration"),
-      getUpcomingEvents(),
+      getReminderData(remindFilter),
       getCurrentAppUser(),
     ]);
   const monthLabel = currentMonthLabelInSeoul();
@@ -115,52 +113,7 @@ export default async function HomePage({
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>오늘의 고객 관리 일정</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!upcomingEvents.ok ? (
-            <p className="py-4 text-center text-sm text-destructive">
-              {upcomingEvents.error}
-            </p>
-          ) : upcomingEvents.data.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              예정된 일정이 없습니다.
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y text-sm">
-              {upcomingEvents.data.map((ev) => (
-                <li
-                  key={ev.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{EVENT_TYPE_LABELS[ev.event_type]}</Badge>
-                    <Link
-                      href={`/customers/${ev.customer_id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {ev.customer_name}
-                    </Link>
-                  </div>
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatKoreanDate(ev.event_date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-2 text-right">
-            <Link
-              href="/reminders"
-              className="text-xs text-muted-foreground hover:underline"
-            >
-              리마인드 화면에서 전체 보기
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <RemindersCard filter={remindFilter} result={reminderData} />
 
       {!result.ok ? (
         <Card>

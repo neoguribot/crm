@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useActionState, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -63,11 +64,14 @@ export function TradeForm({
   cancelHref,
   submitLabel = "거래 등록",
   defaults,
+  beforeFields,
 }: {
   action: Action;
   cancelHref: string;
   submitLabel?: string;
   defaults?: TradeDefaults;
+  /** 거래일 필드 앞에 끼워넣을 추가 필드(예: 고객 선택). */
+  beforeFields?: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(
     action,
@@ -116,6 +120,8 @@ export function TradeForm({
           {state.message}
         </p>
       ) : null}
+
+      {beforeFields}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="trade_date">

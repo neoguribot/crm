@@ -103,7 +103,6 @@ export async function toggleCustomerEventDone(
 
   revalidatePath(`/customers/${customerId}`);
   revalidatePath("/home");
-  revalidatePath("/reminders");
   return { error: null };
 }
 
@@ -136,6 +135,5 @@ export async function deleteCustomerEvent(
 
   revalidatePath(`/customers/${customerId}`);
   revalidatePath("/home");
-  revalidatePath("/reminders");
   return { error: null };
 }

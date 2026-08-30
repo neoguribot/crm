@@ -11,7 +11,8 @@ const PROTECTED_PREFIXES = [
   "/customers",
   "/transactions",
   "/prices",
-  "/reminders",
+  "/calendar",
+  "/analytics",
 ];
 
 function isProtectedPath(pathname: string): boolean {

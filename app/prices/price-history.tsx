@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyInput } from "@/components/ui/money-input";
-import { formatKoreanDate } from "@/lib/date";
+import { isoTimestampToSeoulDateTime } from "@/lib/date";
 import { formatWon } from "@/lib/number";
 import type { GoldPriceListItem } from "@/lib/prices/queries";
 import { deleteGoldPrice, updateGoldPrice } from "@/lib/prices/actions";
@@ -24,7 +24,7 @@ function PriceRow({ item }: { item: GoldPriceListItem }) {
     return (
       <li className="flex flex-wrap items-center gap-2 py-2 text-sm">
         <span className="w-28 shrink-0 tabular-nums text-muted-foreground">
-          {formatKoreanDate(item.price_date)}
+          {isoTimestampToSeoulDateTime(item.registered_at)}
         </span>
         <form action={updateFormAction} className="flex items-center gap-2">
           <MoneyInput
@@ -52,7 +52,7 @@ function PriceRow({ item }: { item: GoldPriceListItem }) {
     <li className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
       <span className="flex items-center gap-3">
         <span className="w-28 shrink-0 tabular-nums text-muted-foreground">
-          {formatKoreanDate(item.price_date)}
+          {isoTimestampToSeoulDateTime(item.registered_at)}
         </span>
         <span className="tabular-nums font-medium">{formatWon(item.price_per_don)}</span>
       </span>

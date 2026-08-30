@@ -45,9 +45,12 @@ export default async function TransactionsPage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
-      <div>
-        <h1 className="text-xl font-semibold">거래 관리</h1>
-        <p className="text-sm text-muted-foreground">전체 거래 검색·조회</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">거래 관리</h1>
+          <p className="text-sm text-muted-foreground">전체 거래 검색·조회</p>
+        </div>
+        <Button render={<Link href="/transactions/new" />}>신규 거래 등록</Button>
       </div>
 
       <form className="flex flex-wrap items-end gap-3" method="get">
@@ -88,6 +91,11 @@ export default async function TransactionsPage({
           </Select>
         </div>
         <Button type="submit">검색</Button>
+        {q || tradeType || status ? (
+          <Button type="button" variant="outline" render={<Link href="/transactions" />}>
+            초기화
+          </Button>
+        ) : null}
       </form>
 
       {!result.ok ? (

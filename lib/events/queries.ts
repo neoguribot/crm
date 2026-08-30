@@ -53,21 +53,22 @@ export async function listCustomerEvents(
   return { ok: true, data: rows.map(mapEventRow) };
 }
 
-/** 홈 대시보드용: 완료되지 않은, 오늘 이후(지연 포함) 일정. 고객 이름/전화 포함. */
-export async function getUpcomingEvents(
-  limit = 20,
+/** 달력 화면용: 날짜 구간(포함) 내 모든 일정(완료 포함). 고객 이름 포함. */
+export async function listEventsInRange(
+  startDate: string,
+  endDate: string,
 ): Promise<QueryResult<UpcomingEventItem[]>> {
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from("customer_events")
     .select(`${COLUMNS}, customers(name, phone)`)
-    .eq("is_done", false)
-    .order("event_date", { ascending: true })
-    .limit(limit);
+    .gte("event_date", startDate)
+    .lte("event_date", endDate)
+    .order("event_date", { ascending: true });
 
   if (error) {
-    console.error("[events] 예정 일정 조회 실패:", error.message);
+    console.error("[events] 기간별 일정 조회 실패:", error.message);
     return {
       ok: false,
       error: "일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",

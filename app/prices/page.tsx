@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 
 import { todayInSeoul } from "@/lib/date";
-import {
-  getLatestGoldPrice,
-  getTodayGoldPrice,
-  listGoldPrices,
-} from "@/lib/prices/queries";
+import { getLatestGoldPrice, listGoldPrices } from "@/lib/prices/queries";
 import { getNotifications } from "@/lib/notifications/queries";
 import { requireUser } from "@/lib/supabase/require-user";
 import { GoldPriceForm } from "@/app/prices/gold-price-form";
@@ -22,20 +18,17 @@ export const dynamic = "force-dynamic";
 export default async function PricesPage() {
   await requireUser();
 
-  const [todayPrice, latestPrice, notifications, history] = await Promise.all([
-    getTodayGoldPrice(),
+  const [latestPrice, notifications, history] = await Promise.all([
     getLatestGoldPrice(),
     getNotifications(),
     listGoldPrices(),
   ]);
 
-  const today = todayInSeoul();
-  const todayValue = todayPrice.ok ? (todayPrice.data?.price_per_don ?? null) : null;
   const latest =
     latestPrice.ok && latestPrice.data
       ? {
           price_per_don: latestPrice.data.price_per_don,
-          price_date: latestPrice.data.price_date,
+          registered_at: latestPrice.data.registered_at,
         }
       : null;
 
@@ -47,11 +40,7 @@ export default async function PricesPage() {
           기준일 {todayInSeoul()} (Asia/Seoul)
         </p>
       </div>
-      <GoldPriceForm
-        today={today}
-        todayPrice={todayValue}
-        latestPrice={latest}
-      />
+      <GoldPriceForm latestPrice={latest} />
       <NotificationCenter initial={notifications.ok ? notifications.data : []} />
       <PriceHistory items={history.ok ? history.data : []} />
     </main>

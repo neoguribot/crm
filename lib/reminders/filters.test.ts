@@ -23,11 +23,15 @@ describe("parseRemindFilter", () => {
 });
 
 describe("remindFilterHref", () => {
-  it("null 은 파라미터 없이", () => {
-    expect(remindFilterHref(null)).toBe("/reminders");
+  it("null 은 파라미터 없이 (기본 경로 /home)", () => {
+    expect(remindFilterHref(null)).toBe("/home");
   });
 
   it("필터값은 status 파라미터로", () => {
-    expect(remindFilterHref("WITHIN_7_DAYS")).toBe("/reminders?status=WITHIN_7_DAYS");
+    expect(remindFilterHref("WITHIN_7_DAYS")).toBe("/home?status=WITHIN_7_DAYS");
+  });
+
+  it("basePath 를 지정할 수 있다", () => {
+    expect(remindFilterHref("OVERDUE", "/somewhere")).toBe("/somewhere?status=OVERDUE");
   });
 });

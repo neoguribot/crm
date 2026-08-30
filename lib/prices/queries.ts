@@ -1,13 +1,12 @@
 import "server-only";
 
-import { todayInSeoul } from "@/lib/date";
 import type { QueryResult } from "@/lib/customers/queries";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { GoldPrice, PriceTarget } from "@/lib/types/database";
 
 export type LatestGoldPrice = Pick<
   GoldPrice,
-  "price_date" | "price_per_don" | "source"
+  "registered_at" | "price_per_don" | "source"
 >;
 
 /**
@@ -21,8 +20,8 @@ export async function getLatestGoldPrice(): Promise<
 
   const { data, error } = await supabase
     .from("gold_prices")
-    .select("price_date, price_per_don::text, source")
-    .order("price_date", { ascending: false })
+    .select("registered_at, price_per_don::text, source")
+    .order("registered_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -35,31 +34,9 @@ export async function getLatestGoldPrice(): Promise<
   return { ok: true, data: (data as unknown as LatestGoldPrice) ?? null };
 }
 
-/** 오늘(Asia/Seoul) 저장된 시세. 없으면 null. */
-export async function getTodayGoldPrice(): Promise<
-  QueryResult<LatestGoldPrice | null>
-> {
-  const supabase = await createServerSupabaseClient();
-  const today = todayInSeoul();
-
-  const { data, error } = await supabase
-    .from("gold_prices")
-    .select("price_date, price_per_don::text, source")
-    .eq("price_date", today)
-    .maybeSingle();
-
-  if (error) {
-    if (error.code === "42P01") return { ok: true, data: null };
-    console.error("[prices] 오늘 시세 조회 실패:", error.message);
-    return { ok: false, error: "시세를 불러오지 못했습니다." };
-  }
-
-  return { ok: true, data: (data as unknown as LatestGoldPrice) ?? null };
-}
-
 export type GoldPriceListItem = Pick<
   GoldPrice,
-  "id" | "price_date" | "price_per_don" | "source"
+  "id" | "registered_at" | "price_per_don" | "source"
 >;
 
 /** 시세 이력. 최근 순. 마이그레이션 0006 미적용 DB(42P01)는 빈 목록으로. */
@@ -70,8 +47,8 @@ export async function listGoldPrices(
 
   const { data, error } = await supabase
     .from("gold_prices")
-    .select("id, price_date, price_per_don::text, source")
-    .order("price_date", { ascending: false })
+    .select("id, registered_at, price_per_don::text, source")
+    .order("registered_at", { ascending: false })
     .limit(limit);
 
   if (error) {

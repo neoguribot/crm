@@ -11,47 +11,35 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
-import { saveTodayGoldPrice, type PriceActionState } from "@/lib/prices/actions";
-import { formatKoreanDate } from "@/lib/date";
+import { saveGoldPrice, type PriceActionState } from "@/lib/prices/actions";
+import { isoTimestampToSeoulDateTime } from "@/lib/date";
 import { formatPricePerDon } from "@/lib/prices/target";
 
 const initial: PriceActionState = { ok: false, error: null };
 
 export function GoldPriceForm({
-  today,
-  todayPrice,
   latestPrice,
 }: {
-  today: string;
-  /** 오늘 저장된 시세 (있으면) */
-  todayPrice: string | null;
-  /** 가장 최근 시세 + 날짜 (오늘이 아닐 수 있음) */
-  latestPrice: { price_per_don: string; price_date: string } | null;
+  /** 가장 최근 등록된 시세 */
+  latestPrice: { price_per_don: string; registered_at: string } | null;
 }) {
-  const [state, action, pending] = useActionState(saveTodayGoldPrice, initial);
+  const [state, action, pending] = useActionState(saveGoldPrice, initial);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>오늘 금 시세</CardTitle>
+        <CardTitle>금 시세 등록</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          순금(24K) 1돈(3.75g) 기준, 원. 저장하면 매수 희망 가격에 도달한 고객을
-          찾아 알림을 만듭니다.
+          순금(24K) 1돈(3.75g) 기준, 원. 저장할 때마다 새 이력으로 쌓이며,
+          매수 희망 가격에 도달한 고객을 찾아 알림을 만듭니다.
         </p>
 
-        {todayPrice ? (
-          <p className="text-sm">
-            오늘({formatKoreanDate(today)}) 저장됨:{" "}
-            <span className="font-semibold tabular-nums">
-              {formatPricePerDon(todayPrice)}
-            </span>
-          </p>
-        ) : latestPrice ? (
+        {latestPrice ? (
           <p className="text-sm text-muted-foreground">
-            최근 시세({formatKoreanDate(latestPrice.price_date)}):{" "}
-            <span className="tabular-nums">
+            최근 등록({isoTimestampToSeoulDateTime(latestPrice.registered_at)}):{" "}
+            <span className="tabular-nums text-foreground">
               {formatPricePerDon(latestPrice.price_per_don)}
             </span>
           </p>
@@ -65,12 +53,11 @@ export function GoldPriceForm({
               name="price_per_don"
               required
               placeholder="예: 588,750"
-              defaultValue={todayPrice ?? latestPrice?.price_per_don ?? ""}
               className="w-40"
             />
           </div>
           <Button type="submit" disabled={pending}>
-            {pending ? "저장 중…" : todayPrice ? "오늘 시세 수정" : "저장"}
+            {pending ? "저장 중…" : "새 시세 등록"}
           </Button>
         </form>
 
@@ -79,7 +66,7 @@ export function GoldPriceForm({
         ) : null}
         {state.ok ? (
           <p className="text-sm text-primary">
-            저장되었습니다.
+            등록되었습니다.
             {state.newAlerts && state.newAlerts > 0
               ? ` 새 알림 ${state.newAlerts}건이 생성되었습니다.`
               : " 새로 도달한 목표가격은 없습니다."}
