@@ -1,7 +1,7 @@
 # Supabase 설정
 
 이 디렉터리는 데이터베이스 스키마(마이그레이션 SQL)와 적용 방법을 담는다.
-`0001` ~ `0020` 을 번호 순서대로 적용하면 현재 앱과 일치하는 스키마가 된다.
+`0001` ~ `0025` 를 번호 순서대로 적용하면 현재 앱과 일치하는 스키마가 된다.
 
 ## 1. 환경변수
 
@@ -49,8 +49,18 @@ Project Settings > API 에서 확인한다.
    - `0019_customer_labels.sql` — 단일 `grade` → 빈도 라벨(`frequency_label`, 신규/단골)·
      매출 라벨(`revenue_label`, 일반/우수/VIP) 두 축으로 분리, `customer_analytics()` 재작성
    - `0020_customer_referrer.sql` — 고객 간 추천인 연결(`referred_by_customer_id`, 자기참조 FK)
+   - `0021_dashboard_trade_counts.sql` — 홈 "거래 수 현황"을 거래 고객 수(distinct)가 아닌
+     거래 건수 기준으로 변경, 진행 중/완료 건수 추가(`dashboard_summary()` 재작성)
+   - `0022_customer_other_details.sql` — 유입경로·방문목적 "기타" 선택 시 세부 내용 컬럼
+     (`inflow_channel_detail`, `purchase_purpose_detail`) 추가
+   - `0023_first_trade_date_trigger.sql` — 고객의 첫 거래 등록 시 `first_trade_date` 자동 갱신
+   - `0024_dashboard_purpose_periods.sql` — "방문 목적별 고객 수"에 기간별(오늘/이번 주/
+     이번 달/올해) 보기 추가, "최근 거래 내역"에 단가·중량·완료 여부 포함
+     (`dashboard_summary()` 재작성)
+   - `0025_customer_analytics_v3.sql` — 종합분석에 방문 목적별 평균 방문 빈도·품목 분포·
+     누적 거래 수 상위 고객 추가(`customer_analytics()` 재작성)
 3. 각 스크립트는 멱등이라 여러 번 실행해도 안전하다.
-4. 스키마 변경은 기존 파일을 고치지 말고 `0021_*.sql` 처럼 새 파일로 추가한다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0026_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 
@@ -164,6 +174,7 @@ drop table if exists public.users;
 drop function if exists public.set_updated_at();
 drop function if exists public.handle_new_auth_user();
 drop function if exists public.trade_records_touch_last_contact();
+drop function if exists public.trade_records_touch_first_trade_date();
 drop function if exists public.dashboard_summary();
 drop function if exists public.customer_count_by_period(text, text);
 drop function if exists public.customer_analytics();
