@@ -2,17 +2,27 @@
 
 > ⚠️ **이 문서와 `supabase/seed/demo_data.sql` 의 모든 데이터는 완전한 가상 정보입니다.**
 > 실제 사람·연락처·거래가 아닙니다. 이름은 전부 `데모 `로 시작하고, 모든 비고는
-> `[DEMO]` 로 시작합니다. 민감정보·실제 고객정보는 포함하지 않습니다.
+> `[DEMO]`로 시작합니다. 민감정보·실제 고객정보는 포함하지 않습니다.
 
 - **파일**: `supabase/seed/demo_data.sql`
-- **규모**: 고객 **18명**, 거래 **24건**, 일정(`customer_events`) **6건** (총 삽입 48행)
-- **스키마 기준**: `supabase/migrations/0001` ~ `0025` 전부 적용된 상태 (성별·완료여부 필드,
-  거래구분·거래품목 정수 코드, `customer_events` 테이블, 빈도·매출 2축 라벨, 추천인 FK,
-  유입경로/방문목적 기타 세부내용, 첫 거래일자 자동 갱신 트리거, 홈 거래 수 현황(건수
-  기준)·방문목적 기간별 보기·최근 거래 단가/중량/완료여부, 종합분석 방문빈도·품목분포·
-  거래수 랭킹 포함).
+- **규모**: 고객 **50명**(절차적으로 생성, 매번 정확한 인원은 아래 §4 검증 SQL로 확인),
+  거래는 고객당 0~20건(대부분 3~8건), 일정 약 16건
+- **스키마 기준**: `supabase/migrations/0001` ~ `0025` 전부 적용된 상태
 
----
+## 0. v1 → v2: 손으로 쓴 18명 고정 데이터 → 절차적 생성 50명
+
+기존(v1)에는 18명의 고객·24건의 거래를 이름까지 손으로 하나씩 작성했습니다. v2는
+클라이언트가 제공한 실제 영업 특성(방문목적 비율, 연령대·성비, 유입경로, 재방문 경향
+등)을 반영해 **분포를 코드로 정의하고 절차적으로 생성**하는 방식으로 바꿨습니다.
+그 결과:
+
+- 이름·정확한 나이·정확한 거래 금액은 **매 실행마다 무작위**로 정해집니다
+  (단, `setseed()`로 난수 시드를 고정해 두어 분포·비율 자체는 안정적입니다).
+- 이 문서는 "고객 c07 은 얼마" 같은 **고정된 정답표를 제공하지 않습니다.** 대신
+  §2 의 분포 설계와 §4 의 검증 SQL로 실제 적용 후 값을 직접 확인하는 방식입니다.
+- **v2 는 재실행할 때마다 그 사용자의 기존 `[DEMO]` 데이터를 먼저 삭제하고 다시
+  만듭니다** (v1 은 이미 있으면 건너뛰는 방식이었습니다). `memo LIKE '[DEMO]%'` 로만
+  걸러 지우므로 실제 데이터는 절대 건드리지 않습니다.
 
 ## 1. 대상 테스트 사용자 지정 방법
 
@@ -31,12 +41,28 @@
 테스트 사용자가 없다면: **Authentication > Users > Add user > Create new user**,
 이메일·비밀번호 입력, **Auto Confirm User** 체크.
 
-## 2. 적용 방법
+## 2. 적용 방법 및 분포 설계
 
 1. 위 1번대로 `v_raw` 를 채운다.
 2. Supabase 대시보드 > **SQL Editor > New query** 에 `demo_data.sql` **전체**를 붙여넣는다.
 3. **Run**.
-4. 성공 시 `NOTICE: 샘플 적용 완료 — 이 사용자의 [DEMO] 고객 18 명, 거래 24 건, 일정 6 건.`
+4. 성공 시 `NOTICE: 샘플 재생성 완료 — 이 사용자의 [DEMO] 고객 50 명, 거래 N 건, 일정 16 건.`
+
+생성 로직(스크립트 상단 주석과 동일, 클라이언트 제공 영업 특성 반영):
+
+| 항목 | 분포 |
+| --- | --- |
+| 고객 수 | 50명 |
+| 등록일 | 오늘 기준 최근 5개월 이내(매장 최근 개업 시나리오) |
+| 고객당 거래 수 | 0건 10% · 1~2건 16% · 3~8건 44% · 9~14건 20% · 15~20건 10% |
+| 방문목적(주된 유형) | 매입 60% · 판매-골드바 32% · 판매-돌반지 6% · 판매-주얼리맞춤 2% (매입 고객 일부는 보상교환으로 골드바도 함께 방문목적에 포함) |
+| 취급 품목 | 순금(24K) 골드바·돌반지·주얼리 맞춤만 판매. **18K/14K 는 매입(고객이 들고 오는 구제품)으로만 등장**, 신규 판매 없음 |
+| 성별 | 전체 약 8:2(여:남). 매입·골드바(투자성) + 30~60대는 7:3, 주얼리는 9:1(여성 위주) |
+| 연령대 | 40대·50대 각 11명(최다) · 30대·60대 각 8명 · 20대·70대 각 6명 |
+| 유입경로 | 워크인(생활구역권)·네이버검색·지인추천이 고르게 상위, 지인추천은 40~60대에 더 집중 |
+| 추천인 | 지인추천 유입 고객의 약 60%가 이전에 생성된(주로 40~60대) 다른 데모 고객을 추천인으로 가짐 |
+| 가격 | 24K 1돈(3.75g)·은 1g 시세를 "오늘 근사치 ~ 5개월 전 근사치"로 선형 보간 + 약간의 일별 변동을 준 발표용 근사값(실시간 시세 아님) |
+| 라벨 | 빈도·매출 라벨은 앱의 자동 추천 기준과 동일하게 맞춰서 저장(빈도: 누적 거래 2건 이상 단골 / 매출: 최근 3개월 합산 거래액 기준) |
 
 ### 안전장치
 
@@ -45,24 +71,30 @@
 | `v_raw` 가 자리표시자 그대로 / 빈 값 | `raise exception` 으로 **중단** |
 | `v_raw` 가 UUID 형식이 아님 | **중단** |
 | 해당 UUID 사용자가 `auth.users` 에 없음 | **중단** |
-| 스크립트 재실행 | 고객·거래·일정 id 가 `md5(사용자UUID + 슬러그)` 라 **`ON CONFLICT DO NOTHING`** → 중복 생성 안 됨 |
-| 다른 사용자에게 실행 | 다른 해시 → 충돌 없음, 그 사용자에게만 별도 생성 |
+| 스크립트 재실행 | 그 사용자의 기존 `[DEMO]` 고객을 **먼저 삭제**한 뒤(거래·일정은 FK cascade로 함께 삭제) 새로 생성 — v1 의 "건너뛰기" 방식에서 "재생성" 방식으로 바뀜 |
+| 다른 사용자에게 실행 | 그 사용자의 `[DEMO]` 데이터만 대상이라 서로 영향 없음 |
 
-- `DROP` / `TRUNCATE` / 전체 `DELETE` **없음**. 기존 데이터를 절대 건드리지 않습니다.
-- 날짜는 전부 "오늘(Asia/Seoul)" 기준 상대값이라 **시간이 지나도 시나리오가 유지**됩니다
-  (단, 일정 6건의 리마인드 상태는 시간이 지나면 지남/N일 이내 구간이 바뀔 수 있습니다).
+- `DROP` / `TRUNCATE` **없음**. `memo LIKE '[DEMO]%'` 로 식별한 행만 지우므로 실제
+  데이터는 절대 건드리지 않습니다.
+- 날짜는 전부 "오늘(Asia/Seoul)" 기준 상대값이라 **시간이 지나도 시나리오가 유지**됩니다.
 - 사용자 프로필(`public.users`)의 월 매출 목표값도 5,000만원으로 함께 채워집니다(upsert).
 
-## 3. 예상 삽입 건수
+## 3. 재실행 / 제거
 
-| 대상 | 건수 |
-| --- | --- |
-| `customers` | 18 |
-| `trade_records` | 24 |
-| `customer_events` | 6 |
-| **합계** | **48** |
+재실행하면 그 사용자의 기존 `[DEMO]` 데이터가 삭제되고 새로 생성됩니다(무작위값이라
+매번 결과가 조금씩 다릅니다). 완전히 제거만 하고 싶다면(재생성 없이) SQL Editor 에서:
 
-재실행 시 삽입 0건(전부 conflict).
+```sql
+do $$
+declare v_uid uuid := 'PUT-YOUR-TEST-USER-UUID-HERE';
+begin
+  if v_uid::text = 'PUT-YOUR-TEST-USER-UUID-HERE' then
+    raise exception '대상 사용자 UUID 를 입력하세요.';
+  end if;
+  delete from public.customers where owner_id = v_uid and memo like '[DEMO]%';
+end $$;
+```
+(`customer_events`, `trade_records` 는 FK on delete cascade로 함께 삭제됩니다.)
 
 ## 4. 적용 후 검증 (읽기 전용)
 
@@ -74,124 +106,65 @@ select
   (select count(*) from customers       where owner_id = '<UUID>' and memo like '[DEMO]%') as demo_customers,
   (select count(*) from trade_records   where owner_id = '<UUID>' and memo like '[DEMO]%') as demo_trades,
   (select count(*) from customer_events where owner_id = '<UUID>' and memo like '[DEMO]%') as demo_events;
--- 기대: 18, 24, 6
+-- 기대: 고객 50, 거래는 대략 150~350 사이(무작위), 일정 16
 
--- (2) 이번 달(Asia/Seoul) 판매/매입 합계 (trade_type: 1=판매, 2=매입)
-select trade_type, sum(amount) as total
+-- (2) 매입:판매 비율 (trade_type: 1=판매, 2=매입) — 기대: 매입이 대략 55~70% 사이
+select trade_type, count(*), round(100.0 * count(*) / sum(count(*)) over (), 1) as pct
 from trade_records
 where owner_id = '<UUID>' and memo like '[DEMO]%'
-  and trade_date >= date_trunc('month', (now() at time zone 'Asia/Seoul'))::date
-  and trade_date <  (date_trunc('month', (now() at time zone 'Asia/Seoul')) + interval '1 month')::date
 group by trade_type order by trade_type;
--- 기대: 1(판매) 5920000 / 2(매입) 1030000
 
--- (3) 방문목적별 고객 수 (복수 목적이면 각각 카운트)
-select p as purpose, count(*)
-from customers c, unnest(c.purchase_purposes) p
-where c.owner_id = '<UUID>' and c.memo like '[DEMO]%'
-group by p order by p;
--- 기대: CUSTOM_JEWELRY 4 / GOLD_BAR 7 / OTHER 2 / PURCHASE 6 / STONE_PRODUCT 5
+-- (3) 품목 분포 (item_type 정수 코드: 1=골드바 4=24K돌반지 5=24K주얼리 6=18K 7=14K
+--     9=은수저 10=치금 등, lib/types/codes.ts 참고) — 판매 쪽엔 6/7(18K/14K)이 없어야 정상
+select trade_type, item_type, count(*)
+from trade_records
+where owner_id = '<UUID>' and memo like '[DEMO]%'
+group by trade_type, item_type order by trade_type, item_type;
+-- 검증 포인트: trade_type=1(판매) 행에는 item_type 6, 7 이 나오면 안 됨(매장이 18K/14K 미판매)
 
--- (4) 빈도·매출 라벨 분포
-select frequency_label, count(*)
+-- (4) 성비 — 기대: 여성(2)이 남성(1)보다 뚜렷이 많음(대략 7~8:2~3)
+select gender, count(*) from customers
+where owner_id = '<UUID>' and memo like '[DEMO]%'
+group by gender order by gender;
+
+-- (5) 연령대 분포 — 기대: 40대·50대가 가장 많고 20대·70대가 가장 적음
+select
+  case
+    when birth_date is null then 'UNKNOWN'
+    when extract(year from age(current_date, birth_date)) < 30 then '20s'
+    when extract(year from age(current_date, birth_date)) < 40 then '30s'
+    when extract(year from age(current_date, birth_date)) < 50 then '40s'
+    when extract(year from age(current_date, birth_date)) < 60 then '50s'
+    when extract(year from age(current_date, birth_date)) < 70 then '60s'
+    else '70s+'
+  end as age_bucket,
+  count(*)
 from customers where owner_id = '<UUID>' and memo like '[DEMO]%'
-group by frequency_label order by frequency_label;
--- 기대: 단골 8 / 신규 10
+group by 1 order by 1;
 
-select revenue_label, count(*)
-from customers where owner_id = '<UUID>' and memo like '[DEMO]%'
-group by revenue_label order by revenue_label;
--- 기대: VIP 3 / 우수 3 / 일반 12
+-- (6) 빈도·매출 라벨 분포
+select frequency_label, count(*) from customers
+where owner_id = '<UUID>' and memo like '[DEMO]%' group by 1 order by 1;
+select revenue_label, count(*) from customers
+where owner_id = '<UUID>' and memo like '[DEMO]%' group by 1 order by 1;
 
--- (5) 홈 대시보드 RPC 결과 (로그인 세션에서만 owner 스코프가 맞음.
+-- (7) 추천인 연결 건수
+select count(*) from customers
+where owner_id = '<UUID>' and memo like '[DEMO]%' and referred_by_customer_id is not null;
+
+-- (8) 홈 대시보드 / 종합분석 RPC 결과 (로그인 세션에서만 owner 스코프가 맞음.
 --     SQL Editor 에서는 0 이 나올 수 있으니 실제 검증은 브라우저로 한다.)
 select public.dashboard_summary();
 select public.customer_analytics();
 ```
 
-## 5. 페르소나별 구성
+## 5. 발표 중 참고
 
-이름은 슬러그(c01…c18)로 식별. "일" 은 **적용일(Asia/Seoul) 기준 상대값**.
-
-| # | 이름 | 성별 | 빈도 라벨 | 매출 라벨 | 유입경로 | 방문목적 | 최초거래일 | 마지막연락 | 거래 | 추천인 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| c01 | 데모 강토리 | 여성 | 신규 | VIP | 지인추천 | 돌제품 | 30일 전 | 30일 전 | 1 | - |
-| c02 | 데모 남해린 | 여성 | 신규 | 일반 | 네이버플레이스 | 돌제품 | 190일 전 | 190일 전 | **0** | - |
-| c03 | 데모 도하준 | 남성 | 단골 | 우수 | 당근마켓 | 돌제품·골드바 | **없음** | **없음** | 2 (같은 날) | - |
-| c04 | 데모 류가온 | 모름 | 신규 | 일반 | 워크인 | 돌제품·기타 | 95일 전 | 95일 전 | 1 | - |
-| c05 | 데모 문서아 | 여성 | 신규 | 일반 | 기타 | 돌제품·주얼리맞춤 | 20일 전 | 20일 전 | 1 | - |
-| c06 | 데모 박도윤 | 남성 | 단골 | VIP | 네이버플레이스 | 골드바 | 100일 전 | 100일 전 | 2 | - |
-| c07 | 데모 서지호 | 남성 | 신규 | 일반 | 지인추천 | 골드바 | 10일 전 | 10일 전 | 1 | c01 강토리 |
-| c08 | 데모 안유찬 | 남성 | 단골 | 일반 | 당근마켓 | 골드바·매입 | **없음** | **없음** | 2 | - |
-| c09 | 데모 오세라 | 여성 | 신규 | 일반 | 워크인 | 골드바 | 5일 전 | 5일 전 | 1 | - |
-| c10 | 데모 유하람 | 모름 | 신규 | 일반 | 기타 | 골드바 | **없음** | **없음** | **0** | - |
-| c11 | 데모 이준서 | 남성 | 신규 | 일반 | 당근마켓 | 매입 | 40일 전 | 40일 전 | 1 | c03 도하준 |
-| c12 | 데모 임채원 | 여성 | 단골 | 우수 | 네이버플레이스 | 매입 | 60일 전 | 60일 전 | 2 | - |
-| c13 | 데모 장시우 | 남성 | 단골 | 일반 | 지인추천 | 매입 | **없음** | **없음** | 2 | - |
-| c14 | 데모 전보름 | 여성 | 신규 | 일반 | 워크인 | 매입·기타 | 35일 전 | 35일 전 | 1 | c05 문서아 |
-| c15 | 데모 정해원 | 남성 | 단골 | VIP | 기타 | 매입 | 380일 전 | 380일 전 | 2 | - |
-| c16 | 데모 조가율 | 여성 | 단골 | 우수 | 네이버플레이스 | 주얼리맞춤 | 15일 전 | 15일 전 | 2 (같은 날) | - |
-| c17 | 데모 채민재 | 남성 | 신규 | 일반 | 지인추천 | 주얼리맞춤 | 55일 전 | 55일 전 | 1 | - |
-| c18 | 데모 한소율 | 여성 | 단골 | 일반 | 당근마켓 | 주얼리맞춤·골드바 | **없음** | **없음** | 2 | - |
-
-구성 요약:
-- 방문목적: 돌제품 5 / 골드바 7 / 매입 6 / 주얼리맞춤 4 / 기타 2 (복수 목적 6명: c03,c04,c05,c08,c14,c18)
-- 유입경로: 당근마켓 4 / 네이버플레이스 4 / 지인추천 4 / 워크인 3 / 기타 3
-- 빈도 라벨: 신규 10 / 단골 8 (거래 건수 2건 이상인 고객이 단골 — 실제 거래 건수와 일치하도록 배정)
-- 매출 라벨: VIP 3 / 우수 3 / 일반 12 (수동 지정값. 자동 추천은 최근 3개월 거래액 기준이라
-  데모 데이터의 개별 거래액 규모상 대부분 "일반"으로 추천된다 — 정상 동작)
-- 성별: 남성 8 / 여성 8 / 모름 2
-- **거래 없음 2명** (c02, c10)
-- **최초거래일·마지막연락일 없음 5명** (c03, c08, c10, c13, c18)
-- **추천인 3건**: c07←c01, c11←c03, c14←c05 (자기참조 FK, 고객 상세에서 링크로 표시됨)
-
-## 6. 일정(customer_events) 6건
-
-| # | 고객 | 종류 | 날짜 | 리마인드 상태 |
-| --- | --- | --- | --- | --- |
-| e01 | c01 강토리 | 문의 | +5일 | 7일 이내 |
-| e02 | c03 도하준 | 재방문 | 오늘 | 오늘 |
-| e03 | c05 문서아 | 맞춤주문 | +25일 | 7일 이후(탭에 표시 안 됨) |
-| e04 | c08 안유찬 | 재방문 | -10일 | 기한 지남 |
-| e05 | c16 조가율 | 생일 | +2일 | 7일 이내 |
-| e06 | c17 채민재 | 안부 | -20일 | 기한 지남 |
-
-탭은 **오늘(기본)/기한 지남/7일 이내** 3개다. 오늘 1(e02) / 기한 지남 2(e04, e06) /
-7일 이내 2(e01, e05). `e03`(+25일)은 세 탭 어디에도 나오지 않는다(7일 이후는 별도
-탭이 없음 — 의도된 동작). 각 일정 항목에는 고객명·종류·날짜·남은(지난) 일자·메모
-미리보기(15자 초과 시 `…`)가 표시된다.
-`e03`(c05, 맞춤주문)에는 연결된 거래(`trade_id`)가 없다 — 화면에서 직접 거래를 연동해
-보여줄 때는 고객 상세에서 새 일정을 등록하며 관련 거래를 선택하면 된다.
-
-## 7. 예상 대시보드 값 (검증 기준)
-
-| 항목 | 기대값 | 비고 |
-| --- | --- | --- |
-| 전체 고객 수 | **18** | |
-| 이번 달 판매 금액 | **5,920,000원** | t01,t05,t08,t11,t20,t21,t24 |
-| 이번 달 매입 금액 | **1,030,000원** | t12,t17 |
-| 방문목적별(전체 보기) | 돌제품 5 · 골드바 7 · 매입 6 · 주얼리맞춤 4 · 기타 2 | 합계 24 ≠ 18 (복수 목적) |
-| 홈 일정 위젯(기본, 오늘 탭) | **1건**(e02) | §6 참고. 기한 지남 2 · 7일 이내 2 |
-| 거래 수 현황(오늘/어제/진행중/완료) | 적용일 기준 값(거래 건수, 고객 수 아님) | 적용일에 따라 달라짐 |
-| 최근 거래 내역 5건 | 거래일·구분·이름·품목·단가·중량·총 금액·완료 여부, 거래일 내림차순 | |
-
-> **이번 달 합계 ≠ 전체 거래 합계.** 홈 대시보드는 이번 달만 집계합니다.
-> 전체 거래 합계(참고, 적용일 무관): 판매 **15,035,000** / 매입 **9,555,000**.
-
-## 8. 샘플 데이터만 제거하는 방법 (자동 실행 안 함)
-
-필요할 때 **직접** SQL Editor 에서 실행. `[DEMO]` 비고로 샘플만 식별해 제거하므로
-실제 데이터는 영향받지 않습니다.
-
-```sql
-do $$
-declare v_uid uuid := 'PUT-YOUR-TEST-USER-UUID-HERE';
-begin
-  if v_uid::text = 'PUT-YOUR-TEST-USER-UUID-HERE' then
-    raise exception '대상 사용자 UUID 를 입력하세요.';
-  end if;
-  delete from public.customer_events where owner_id = v_uid and memo like '[DEMO]%';
-  delete from public.trade_records   where owner_id = v_uid and memo like '[DEMO]%';
-  delete from public.customers       where owner_id = v_uid and memo like '[DEMO]%';
-end $$;
-```
+- 화면에서 특정 고객을 예시로 보여줄 때는 **고객 목록에서 필터로 골라서** 보여주는
+  방식을 권장합니다(예: 방문목적 = 골드바, 매출 라벨 = VIP 등). 이름이 매 실행마다
+  달라지므로 "데모 OOO를 클릭"처럼 고정된 이름을 스크립트에 넣지 않습니다
+  (`docs/DEMO_SCENARIO.md` 참고).
+- 거래가 **0건인 고객**도 일부러 포함돼 있습니다(전체의 약 10%) — "신규 고객 등록만
+  하고 아직 거래가 없는 상태" 시연에 활용할 수 있습니다.
+- 거래가 **15건 이상인 "큰손" 고객**도 일부 있습니다 — 지표 카드·종합분석의 "누적
+  거래액/거래 수 상위 고객" 시연에 활용할 수 있습니다.
