@@ -3,14 +3,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CopyablePhone } from "@/components/copyable-phone";
 import { formatKoreanDate } from "@/lib/date";
-import { EVENT_TYPE_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { EVENT_TYPE_LABELS } from "@/lib/labels";
 import { remindFilterHref } from "@/lib/reminders/filters";
 import type { ReminderData } from "@/lib/reminders/queries";
 import {
   formatDayDelta,
-  REMIND_STATUS_LABELS,
   type RemindFilter,
   type RemindStatus,
 } from "@/lib/reminders/status";
@@ -18,19 +16,25 @@ import type { QueryResult } from "@/lib/customers/queries";
 
 const STATUS_BADGE: Record<RemindStatus, "secondary" | "outline"> = {
   OVERDUE: "secondary",
-  WITHIN_7_DAYS: "secondary",
-  WITHIN_30_DAYS: "outline",
-  BEYOND_30: "outline",
-  NO_EVENT: "outline",
+  TODAY: "secondary",
+  WITHIN_7_DAYS: "outline",
+  LATER: "outline",
 };
 
 const TABS: { filter: RemindFilter | null; label: string }[] = [
-  { filter: null, label: "기본 (지남 + 30일 이내)" },
+  { filter: null, label: "오늘" },
   { filter: "OVERDUE", label: "기한 지남" },
   { filter: "WITHIN_7_DAYS", label: "7일 이내" },
-  { filter: "WITHIN_30_DAYS", label: "30일 이내" },
-  { filter: "ALL_UPCOMING", label: "30일 이내 전체" },
 ];
+
+const MEMO_PREVIEW_LENGTH = 15;
+
+function previewMemo(memo: string | null): string | null {
+  if (!memo) return null;
+  return memo.length > MEMO_PREVIEW_LENGTH
+    ? `${memo.slice(0, MEMO_PREVIEW_LENGTH)}…`
+    : memo;
+}
 
 export function RemindersCard({
   filter,
@@ -75,31 +79,23 @@ export function RemindersCard({
                 {result.data.items.map((ev) => (
                   <li key={ev.id} className="flex flex-col gap-1 py-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">{EVENT_TYPE_LABELS[ev.event_type]}</Badge>
-                      <Badge variant={STATUS_BADGE[ev.status]}>
-                        {REMIND_STATUS_LABELS[ev.status]}
-                      </Badge>
                       <Link
                         href={`/customers/${ev.customer_id}`}
                         className="font-medium hover:underline"
                       >
                         {ev.name}
                       </Link>
+                      <Badge variant="outline">{EVENT_TYPE_LABELS[ev.event_type]}</Badge>
                       <span className="tabular-nums text-muted-foreground">
-                        {formatKoreanDate(ev.event_date)} · {formatDayDelta(ev.dayDelta)}
+                        {formatKoreanDate(ev.event_date)}
                       </span>
+                      <Badge variant={STATUS_BADGE[ev.status]}>
+                        {formatDayDelta(ev.dayDelta)}
+                      </Badge>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        연락처: <CopyablePhone phone={ev.phone} />
-                      </span>
-                      <span>
-                        방문 목적:{" "}
-                        {ev.purchase_purposes.length > 0
-                          ? ev.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
-                          : "없음"}
-                      </span>
-                    </div>
+                    {previewMemo(ev.memo) ? (
+                      <p className="text-xs text-muted-foreground">{previewMemo(ev.memo)}</p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

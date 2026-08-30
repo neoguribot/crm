@@ -13,6 +13,12 @@ describe("normalizeCustomerAnalytics", () => {
       top_customers: [
         { id: "c1", name: "홍길동", total_amount: "5000000", trade_count: 3 },
       ],
+      purpose_avg_frequency: { GOLD_BAR: 2.5, OTHER: 0 },
+      overall_avg_frequency: 1.8,
+      item_type_counts: { "1": 4, "99": 2 },
+      top_customers_by_count: [
+        { id: "c1", name: "홍길동", total_amount: "5000000", trade_count: 3 },
+      ],
     });
     expect(a.customerCount).toBe(18);
     expect(a.genderCounts.MALE).toBe(8);
@@ -26,6 +32,12 @@ describe("normalizeCustomerAnalytics", () => {
     expect(a.ageBucketCounts["10s"]).toBe(0);
     expect(a.topCustomers).toHaveLength(1);
     expect(a.topCustomers[0].totalAmount).toBe("5000000");
+    expect(a.purposeAvgFrequency.GOLD_BAR).toBe(2.5);
+    expect(a.purposeAvgFrequency.OTHER).toBe(0);
+    expect(a.overallAvgFrequency).toBe(1.8);
+    expect(a.itemTypeCounts.GOLD_BAR).toBe(4);
+    expect(a.itemTypeCounts.OTHER).toBe(2);
+    expect(a.topCustomersByCount).toHaveLength(1);
   });
 
   it("빈/잘못된 응답은 0과 빈 배열로 안전하게 채운다", () => {

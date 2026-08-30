@@ -10,33 +10,25 @@ import {
 const TODAY = "2026-08-28";
 
 describe("classifyRemindStatus", () => {
-  it("이벤트일이 없으면 NO_EVENT", () => {
-    expect(classifyRemindStatus(null, TODAY)).toBe("NO_EVENT");
-  });
-
   it("오늘 이전이면 OVERDUE", () => {
     expect(classifyRemindStatus("2026-08-27", TODAY)).toBe("OVERDUE");
     expect(classifyRemindStatus("2025-01-01", TODAY)).toBe("OVERDUE");
   });
 
-  it("오늘이면 WITHIN_7_DAYS", () => {
-    expect(classifyRemindStatus(TODAY, TODAY)).toBe("WITHIN_7_DAYS");
+  it("오늘이면 TODAY", () => {
+    expect(classifyRemindStatus(TODAY, TODAY)).toBe("TODAY");
+  });
+
+  it("1일 후는 WITHIN_7_DAYS", () => {
+    expect(classifyRemindStatus("2026-08-29", TODAY)).toBe("WITHIN_7_DAYS");
   });
 
   it("정확히 7일 후는 WITHIN_7_DAYS", () => {
     expect(classifyRemindStatus("2026-09-04", TODAY)).toBe("WITHIN_7_DAYS");
   });
 
-  it("정확히 8일 후는 WITHIN_30_DAYS", () => {
-    expect(classifyRemindStatus("2026-09-05", TODAY)).toBe("WITHIN_30_DAYS");
-  });
-
-  it("정확히 30일 후는 WITHIN_30_DAYS", () => {
-    expect(classifyRemindStatus("2026-09-27", TODAY)).toBe("WITHIN_30_DAYS");
-  });
-
-  it("31일 후는 BEYOND_30", () => {
-    expect(classifyRemindStatus("2026-09-28", TODAY)).toBe("BEYOND_30");
+  it("정확히 8일 후는 LATER", () => {
+    expect(classifyRemindStatus("2026-09-05", TODAY)).toBe("LATER");
   });
 
   it("월 경계를 넘어도 정확 (Asia/Seoul 날짜 문자열 기준)", () => {
@@ -55,24 +47,16 @@ describe("remindDayDelta", () => {
 });
 
 describe("matchesRemindFilter", () => {
-  it("null(기본) = 기한 지남 + 30일 이내", () => {
-    expect(matchesRemindFilter("OVERDUE", null)).toBe(true);
-    expect(matchesRemindFilter("WITHIN_7_DAYS", null)).toBe(true);
-    expect(matchesRemindFilter("WITHIN_30_DAYS", null)).toBe(true);
-    expect(matchesRemindFilter("BEYOND_30", null)).toBe(false);
-    expect(matchesRemindFilter("NO_EVENT", null)).toBe(false);
-  });
-
-  it("ALL_UPCOMING = 7일 이내 + 30일 이내 (지남 제외)", () => {
-    expect(matchesRemindFilter("OVERDUE", "ALL_UPCOMING")).toBe(false);
-    expect(matchesRemindFilter("WITHIN_7_DAYS", "ALL_UPCOMING")).toBe(true);
-    expect(matchesRemindFilter("WITHIN_30_DAYS", "ALL_UPCOMING")).toBe(true);
+  it("null(기본) = TODAY", () => {
+    expect(matchesRemindFilter("TODAY", null)).toBe(true);
+    expect(matchesRemindFilter("OVERDUE", null)).toBe(false);
+    expect(matchesRemindFilter("WITHIN_7_DAYS", null)).toBe(false);
   });
 
   it("단일 상태 필터", () => {
     expect(matchesRemindFilter("OVERDUE", "OVERDUE")).toBe(true);
     expect(matchesRemindFilter("WITHIN_7_DAYS", "OVERDUE")).toBe(false);
-    expect(matchesRemindFilter("NO_EVENT", "NO_EVENT")).toBe(true);
+    expect(matchesRemindFilter("WITHIN_7_DAYS", "WITHIN_7_DAYS")).toBe(true);
   });
 });
 

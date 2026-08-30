@@ -17,7 +17,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   FREQUENCY_LABEL_LABELS,
-  INFLOW_CHANNEL_LABELS,
   PURCHASE_PURPOSE_LABELS,
   REVENUE_LABEL_LABELS,
 } from "@/lib/labels";
@@ -123,14 +122,6 @@ export default async function CustomersPage({
                   <CardContent className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
                       <span>
-                        유입 경로:{" "}
-                        {customer.inflow_channels.length > 0
-                          ? customer.inflow_channels
-                              .map((ch) => INFLOW_CHANNEL_LABELS[ch])
-                              .join(", ")
-                          : "없음"}
-                      </span>
-                      <span>
                         방문 목적:{" "}
                         {customer.purchase_purposes.length > 0
                           ? customer.purchase_purposes
@@ -139,7 +130,10 @@ export default async function CustomersPage({
                           : "없음"}
                       </span>
                       <span>
-                        최근 방문일: {formatKoreanDate(customer.last_visit_date)}
+                        마지막 연락일:{" "}
+                        {customer.last_contact_date
+                          ? formatKoreanDate(customer.last_contact_date)
+                          : "없음"}
                       </span>
                     </div>
                     <div className="flex gap-2">

@@ -131,13 +131,13 @@ export default async function CustomerDetailPage({
       ? priceResult.data.price_per_don
       : null;
   const channels =
-    c.inflow_channels.length > 0
+    (c.inflow_channels.length > 0
       ? c.inflow_channels.map((ch) => INFLOW_CHANNEL_LABELS[ch]).join(", ")
-      : "없음";
+      : "없음") + (c.inflow_channel_detail ? ` (${c.inflow_channel_detail})` : "");
   const purposes =
-    c.purchase_purposes.length > 0
+    (c.purchase_purposes.length > 0
       ? c.purchase_purposes.map((p) => PURCHASE_PURPOSE_LABELS[p]).join(", ")
-      : "없음";
+      : "없음") + (c.purchase_purpose_detail ? ` (${c.purchase_purpose_detail})` : "");
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-10">

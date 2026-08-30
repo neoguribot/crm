@@ -1,8 +1,10 @@
 /** 라벨별 건수를 가로 막대로 보여주는 순수 서버 컴포넌트. 차트 라이브러리 없이 div 로만. */
 export function BarList({
   rows,
+  unit = "명",
 }: {
   rows: { label: string; count: number }[];
+  unit?: string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   const total = rows.reduce((s, r) => s + r.count, 0);
@@ -21,7 +23,7 @@ export function BarList({
               />
             </div>
             <span className="w-16 shrink-0 text-right tabular-nums">
-              {r.count.toLocaleString("ko-KR")}명
+              {r.count.toLocaleString("ko-KR")}{unit}
             </span>
             <span className="w-12 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
               {pct}%

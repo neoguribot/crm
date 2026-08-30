@@ -3,17 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useId } from "react";
 
+import { CalendarDateField } from "@/components/ui/calendar-date-field";
 import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   FREQUENCY_LABEL_LABELS,
   INFLOW_CHANNEL_LABELS,
@@ -31,30 +25,35 @@ import {
   type CustomerFilters,
 } from "@/lib/customers/filters";
 
-const ALL = "ALL";
+function CheckboxFilterGroup({
+  legend,
+  name,
+  options,
+  labels,
+  defaultValues,
+}: {
+  legend: string;
+  name: string;
+  options: readonly string[];
+  labels: Record<string, string>;
+  defaultValues: readonly string[];
+}) {
+  const checked = new Set(defaultValues);
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="text-sm text-muted-foreground">{legend}</legend>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        {options.map((code) => (
+          <label key={code} className="flex items-center gap-1.5 text-sm">
+            <Checkbox name={name} value={code} defaultChecked={checked.has(code)} />
+            {labels[code]}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
-const PURPOSE_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(
-    PURCHASE_PURPOSES.map((c) => [c, PURCHASE_PURPOSE_LABELS[c]]),
-  ),
-};
-const CHANNEL_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(
-    INFLOW_CHANNELS.map((c) => [c, INFLOW_CHANNEL_LABELS[c]]),
-  ),
-};
-const FREQUENCY_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(
-    FREQUENCY_LABELS.map((c) => [c, FREQUENCY_LABEL_LABELS[c]]),
-  ),
-};
-const REVENUE_ITEMS: Record<string, string> = {
-  [ALL]: "전체",
-  ...Object.fromEntries(REVENUE_LABELS.map((c) => [c, REVENUE_LABEL_LABELS[c]])),
-};
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
   const qId = useId();
@@ -69,20 +68,13 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
     const q = String(form.get("q") ?? "").trim().slice(0, SEARCH_MAX_LENGTH);
     if (q) params.set("q", q);
 
-    const purpose = String(form.get("purpose") ?? "");
-    if (purpose && purpose !== ALL) params.set("purpose", purpose);
-
-    const channel = String(form.get("channel") ?? "");
-    if (channel && channel !== ALL) params.set("channel", channel);
-
-    const frequencyLabel = String(form.get("frequencyLabel") ?? "");
-    if (frequencyLabel && frequencyLabel !== ALL) {
-      params.set("frequencyLabel", frequencyLabel);
+    for (const p of form.getAll("purpose")) params.append("purpose", String(p));
+    for (const c of form.getAll("channel")) params.append("channel", String(c));
+    for (const f of form.getAll("frequencyLabel")) {
+      params.append("frequencyLabel", String(f));
     }
-
-    const revenueLabel = String(form.get("revenueLabel") ?? "");
-    if (revenueLabel && revenueLabel !== ALL) {
-      params.set("revenueLabel", revenueLabel);
+    for (const r of form.getAll("revenueLabel")) {
+      params.append("revenueLabel", String(r));
     }
 
     let visitFrom = String(form.get("visitFrom") ?? "").trim();
@@ -114,90 +106,34 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label>방문 목적</Label>
-          <Select
-            name="purpose"
-            items={PURPOSE_ITEMS}
-            defaultValue={filters.purpose ?? ALL}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {PURCHASE_PURPOSES.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {PURCHASE_PURPOSE_LABELS[code]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label>유입 경로</Label>
-          <Select
-            name="channel"
-            items={CHANNEL_ITEMS}
-            defaultValue={filters.channel ?? ALL}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {INFLOW_CHANNELS.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {INFLOW_CHANNEL_LABELS[code]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label>빈도 라벨</Label>
-          <Select
-            name="frequencyLabel"
-            items={FREQUENCY_ITEMS}
-            defaultValue={filters.frequencyLabel ?? ALL}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {FREQUENCY_LABELS.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {FREQUENCY_LABEL_LABELS[code]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label>매출 라벨</Label>
-          <Select
-            name="revenueLabel"
-            items={REVENUE_ITEMS}
-            defaultValue={filters.revenueLabel ?? ALL}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {REVENUE_LABELS.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {REVENUE_LABEL_LABELS[code]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
+        <CheckboxFilterGroup
+          legend="방문 목적"
+          name="purpose"
+          options={PURCHASE_PURPOSES}
+          labels={PURCHASE_PURPOSE_LABELS}
+          defaultValues={filters.purposes}
+        />
+        <CheckboxFilterGroup
+          legend="유입 경로"
+          name="channel"
+          options={INFLOW_CHANNELS}
+          labels={INFLOW_CHANNEL_LABELS}
+          defaultValues={filters.channels}
+        />
+        <CheckboxFilterGroup
+          legend="빈도 라벨"
+          name="frequencyLabel"
+          options={FREQUENCY_LABELS}
+          labels={FREQUENCY_LABEL_LABELS}
+          defaultValues={filters.frequencyLabels}
+        />
+        <CheckboxFilterGroup
+          legend="매출 라벨"
+          name="revenueLabel"
+          options={REVENUE_LABELS}
+          labels={REVENUE_LABEL_LABELS}
+          defaultValues={filters.revenueLabels}
+        />
       </div>
 
       <fieldset className="flex flex-col gap-1.5">
@@ -207,7 +143,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
             <Label htmlFor={visitFromId} className="text-xs text-muted-foreground">
               시작
             </Label>
-            <DateInput
+            <CalendarDateField
               id={visitFromId}
               name="visitFrom"
               defaultValue={filters.visitFrom ?? ""}
@@ -217,7 +153,7 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
             <Label htmlFor={visitToId} className="text-xs text-muted-foreground">
               종료
             </Label>
-            <DateInput
+            <CalendarDateField
               id={visitToId}
               name="visitTo"
               defaultValue={filters.visitTo ?? ""}

@@ -5,13 +5,10 @@ import { codeToGender } from "@/lib/types/codes";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { CustomerFilters } from "@/lib/customers/filters";
 import { customerMatchesQuery } from "@/lib/customers/match";
-import {
-  resolveLastVisitDate,
-  visitedWithin,
-} from "@/lib/customers/recent-visit";
+import { visitedWithin } from "@/lib/customers/recent-visit";
 
 const CUSTOMER_FIELDS =
-  "id, name, phone, email, birth_date, gender, address, inflow_channels, purchase_purposes, frequency_label, revenue_label, referred_by_customer_id, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
+  "id, name, phone, email, birth_date, gender, address, inflow_channels, inflow_channel_detail, purchase_purposes, purchase_purpose_detail, frequency_label, revenue_label, referred_by_customer_id, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
 
 /** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
 const LIST_COLUMNS = `${CUSTOMER_FIELDS}, trade_records(trade_date)`;
@@ -29,7 +26,9 @@ export type CustomerDetail = Pick<
   | "gender"
   | "address"
   | "inflow_channels"
+  | "inflow_channel_detail"
   | "purchase_purposes"
+  | "purchase_purpose_detail"
   | "frequency_label"
   | "revenue_label"
   | "referred_by_customer_id"
@@ -41,7 +40,7 @@ export type CustomerDetail = Pick<
   | "updated_at"
 >;
 
-/** 목록 행: 저장 컬럼 + 계산된 최근 방문일. */
+/** 목록 행: 표시에 필요한 컬럼. */
 export type CustomerListItem = Pick<
   Customer,
   | "id"
@@ -53,10 +52,9 @@ export type CustomerListItem = Pick<
   | "revenue_label"
   | "registered_on"
   | "first_trade_date"
+  | "last_contact_date"
   | "created_at"
-> & {
-  last_visit_date: string;
-};
+>;
 
 export type QueryResult<T> =
   | { ok: true; data: T }
@@ -111,10 +109,6 @@ export async function searchCustomers(
 
   const mapped = rows.map((row) => {
     const tradeDates = (row.trade_records ?? []).map((t) => t.trade_date);
-    const lastVisit = resolveLastVisitDate(row.registered_on, [
-      row.first_trade_date,
-      ...tradeDates,
-    ]);
     const item: CustomerListItem = {
       id: row.id,
       name: row.name,
@@ -125,8 +119,8 @@ export async function searchCustomers(
       revenue_label: row.revenue_label,
       registered_on: row.registered_on,
       first_trade_date: row.first_trade_date,
+      last_contact_date: row.last_contact_date,
       created_at: row.created_at,
-      last_visit_date: lastVisit,
     };
     // 방문일 = 고객 등록일 + 첫 거래일자 + 모든 거래일
     const visitDates = [
@@ -142,19 +136,31 @@ export async function searchCustomers(
       // 이름은 정확히 일치, 연락처는 부분 일치.
       if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
 
-      if (filters.channel && !c.inflow_channels.includes(filters.channel)) {
+      if (
+        filters.channels.length > 0 &&
+        !c.inflow_channels.some((ch) => filters.channels.includes(ch))
+      ) {
         return false;
       }
 
-      if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
+      if (
+        filters.purposes.length > 0 &&
+        !c.purchase_purposes.some((p) => filters.purposes.includes(p))
+      ) {
         return false;
       }
 
-      if (filters.frequencyLabel && c.frequency_label !== filters.frequencyLabel) {
+      if (
+        filters.frequencyLabels.length > 0 &&
+        !filters.frequencyLabels.includes(c.frequency_label)
+      ) {
         return false;
       }
 
-      if (filters.revenueLabel && c.revenue_label !== filters.revenueLabel) {
+      if (
+        filters.revenueLabels.length > 0 &&
+        !filters.revenueLabels.includes(c.revenue_label)
+      ) {
         return false;
       }
 

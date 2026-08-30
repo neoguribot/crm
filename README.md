@@ -49,7 +49,7 @@ npm run build          # 프로덕션 빌드
 ## 데이터베이스 (Supabase)
 
 적용 방법·RLS·인덱스·numeric 처리 근거는 [`supabase/README.md`](./supabase/README.md).
-마이그레이션은 `supabase/migrations/0001` ~ `0020` 을 번호 순서대로 SQL Editor 에
+마이그레이션은 `supabase/migrations/0001` ~ `0025` 를 번호 순서대로 SQL Editor 에
 붙여넣어 적용한다. 각 파일 상단 주석에 목적이 적혀 있다.
 
 핵심만 요약하면:
@@ -63,6 +63,12 @@ npm run build          # 프로덕션 빌드
 - `0017` — 시세를 "하루 1건 덮어쓰기"가 아닌 "등록마다 쌓이는 이력"으로 전환
 - `0019` — 단일 `grade` 를 빈도 라벨(신규/단골)·매출 라벨(일반/우수/VIP) 두 축으로 분리
 - `0020` — 고객 간 추천인 연결(`referred_by_customer_id`, 자기참조 FK)
+- `0021` — 홈 "거래 수 현황"을 거래 고객 수(distinct)가 아닌 거래 건수 기준으로 변경
+- `0022` — 고객 유입경로·방문목적 "기타" 선택 시 세부 내용 컬럼 추가
+- `0023` — 고객의 첫 거래 등록 시 `first_trade_date` 자동 갱신 트리거
+- `0024` — 홈 "방문 목적별 고객 수"에 기간별(오늘/이번 주/이번 달/올해) 보기 추가,
+  "최근 거래 내역"에 단가·중량·완료 여부 포함
+- `0025` — 종합분석에 방문 목적별 평균 방문 빈도·품목 분포·누적 거래 수 상위 고객 추가
 
 발표·시연용 가상 샘플 데이터: [`docs/DEMO_DATA.md`](./docs/DEMO_DATA.md), `supabase/seed/demo_data.sql`.
 
@@ -86,18 +92,26 @@ Supabase 대시보드 > Authentication > Users > **Add user** > 이메일·비�
 ## 기능 범위
 
 1. 고객 정보 관리 — 조회·등록·수정·삭제, 성별·빈도 라벨(신규/단골)·매출 라벨(일반/우수/
-   VIP)·유입경로·방문목적·추천인(기존 고객 연결) 등
-2. 거래 정보 관리 — 조회·등록·수정·삭제(`/transactions`), 고객 상세 안에서도 등록 가능
+   VIP)·유입경로·방문목적(각 "기타" 선택 시 세부 내용 입력)·추천인(이름/전화번호로
+   검색하는 콤보박스로 기존 고객 연결) 등. 날짜 입력은 생년월일을 제외하고 모두 달력
+   팝오버 지원
+2. 거래 정보 관리 — 조회·등록·수정·삭제(`/transactions`), 고객 상세 안에서도 등록 가능.
+   고객 선택은 이름/전화번호 검색 콤보박스, 거래일은 달력 팝오버, 검색은 거래구분·완료
+   여부·거래일 구간 필터 지원
 3. 시세 정보 관리 — 시세 이력 등록·수정·삭제, 목표가 도달 알림(`/prices`)
-4. 홈 대시보드 — 오늘의 고객 관리 일정(필터 탭), 거래 고객 수(어제/오늘/주/월/년),
-   매출 지표, 목표 도달 현황(월 매출 목표 인라인 수정), 최근 거래, 방문목적별 통계
-5. 캘린더 — 월 단위로 고객 일정 보기(`/calendar`)
-6. 종합 분석 — 성별·빈도 라벨·매출 라벨·연령대·유입경로 분포, 누적 거래액 상위
-   고객(`/analytics`)
+4. 홈 대시보드 — 오늘의 고객 관리 일정(오늘/기한 지남/7일 이내 탭), 거래 수 현황(오늘/
+   어제/진행중/완료 + 이번 주·이번 달·올해 누적), 매출 지표, 목표 도달 현황(판매+매입
+   합산, 월 매출 목표 인라인 수정), 최근 거래 내역(거래일·구분·이름·품목·단가·중량·
+   총 금액·완료 여부), 방문 목적별 고객 수(전체/오늘/이번 주/이번 달/올해 보기)
+5. 캘린더 — 월 단위로 고객 일정 보기, 연월 라벨 클릭 시 팝오버로 연/월 바로 이동(`/calendar`)
+6. 종합 분석 — 성별·연령대·유입경로(왼쪽) / 빈도 라벨·매출 라벨·방문 목적별 평균 방문
+   빈도·품목 분포(오른쪽) 분포, 누적 거래액·누적 거래 수 상위 고객(`/analytics`)
 7. 고객 상세 — 일정 섹션(문의/예약/맞춤주문/재방문/시세알림/생일/안부 등 여러 건 동시
    관리, 진행 중인 거래와 연동), 지표 카드(누적 매출액·거래 횟수·평균 재방문 주기·
-   라벨, 차트 없이 숫자로만 표시), 추천인 표시
-8. 고객 목록 세그먼트 필터(방문목적+빈도/매출 라벨 조합) + 필터링된 목록 연락처 일괄 복사
+   라벨, 차트 없이 숫자로만 표시), 추천인 표시. 첫 거래 등록 시 첫 거래일자 자동 갱신
+8. 고객 목록 — 이름·라벨·방문 목적·마지막 연락일·전화번호 표시, 방문목적/유입경로/
+   빈도·매출 라벨 체크박스 다중 선택 필터 + 방문일 구간(달력 팝오버) + 필터링된 목록
+   연락처 일괄 복사
 
 ### 다음 단계로 미룬 기능
 
@@ -130,12 +144,14 @@ app/
   layout.tsx            루트 레이아웃 + 공통 네비게이션(AppNav)
   page.tsx  login/  logout/
   home/  customers/  transactions/  prices/  calendar/  analytics/
+    calendar/month-nav.tsx (연월 팝오버 선택)
     (+ 각 loading.tsx)
   error.tsx  not-found.tsx  global-error.tsx  icon.svg
 components/
-  app-nav.tsx  copyable-phone.tsx  ...
+  app-nav.tsx  copyable-phone.tsx  customer-combobox.tsx (이름/전화번호 검색 선택)  ...
   ui/                    shadcn/ui (button, card, input, label, select,
-                         checkbox, textarea, badge, skeleton, money-input, date-input)
+                         checkbox, textarea, badge, skeleton, money-input,
+                         date-input, calendar-date-field, calendar-grid, popover)
 lib/
   constants.ts labels.ts date.ts calendar.ts number.ts phone.ts
   supabase/    env·client·server·middleware·require-user·auth-errors
@@ -150,7 +166,7 @@ lib/
   validation/  customer·trade-record·customer-event·flatten
   types/       database.ts (앱 레벨 타입) codes.ts (DB 정수 코드 변환)
 supabase/
-  migrations/  0001 ~ 0020
+  migrations/  0001 ~ 0025
   seed/        demo_data.sql
   README.md
 docs/

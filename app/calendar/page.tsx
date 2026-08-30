@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   isInMonth,
   monthGridWeeks,
-  monthLabel,
   nextMonth,
   parseYearMonth,
   prevMonth,
@@ -18,6 +17,7 @@ import { formatKoreanDate, isValidIsoDate, todayInSeoul } from "@/lib/date";
 import { EVENT_TYPE_LABELS } from "@/lib/labels";
 import { listEventsInRange, type UpcomingEventItem } from "@/lib/events/queries";
 import { requireUser } from "@/lib/supabase/require-user";
+import { MonthNav } from "@/app/calendar/month-nav";
 
 export const metadata: Metadata = {
   title: "캘린더",
@@ -80,7 +80,7 @@ export default async function CalendarPage({
           <Button variant="outline" size="sm" render={<Link href={monthHref(prevMonth(ym))} />}>
             이전 달
           </Button>
-          <span className="min-w-24 text-center text-sm font-medium">{monthLabel(ym)}</span>
+          <MonthNav ym={ym} />
           <Button variant="outline" size="sm" render={<Link href={monthHref(nextMonth(ym))} />}>
             다음 달
           </Button>

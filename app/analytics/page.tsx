@@ -6,12 +6,16 @@ import {
   FREQUENCY_LABEL_LABELS,
   GENDER_LABELS,
   INFLOW_CHANNEL_LABELS,
+  itemTypeLabel,
+  PURCHASE_PURPOSE_LABELS,
   REVENUE_LABEL_LABELS,
 } from "@/lib/labels";
 import {
   FREQUENCY_LABELS,
   GENDERS,
   INFLOW_CHANNELS,
+  ITEM_TYPES,
+  PURCHASE_PURPOSES,
   REVENUE_LABELS,
 } from "@/lib/types/database";
 import { AGE_BUCKETS, AGE_BUCKET_LABELS } from "@/lib/analytics/summary";
@@ -49,114 +53,201 @@ export default async function AnalyticsPage() {
       ) : (
         <>
           <section className="grid gap-6 lg:grid-cols-2">
+            <div className="flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>성별 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={GENDERS.map((g) => ({
+                      label: GENDER_LABELS[g],
+                      count: result.data.genderCounts[g],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>연령대 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={AGE_BUCKETS.map((a) => ({
+                      label: AGE_BUCKET_LABELS[a],
+                      count: result.data.ageBucketCounts[a],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>유입 경로 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={INFLOW_CHANNELS.map((c) => ({
+                      label: INFLOW_CHANNEL_LABELS[c],
+                      count: result.data.channelCounts[c],
+                    }))}
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    한 고객이 여러 경로를 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>빈도 라벨 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={FREQUENCY_LABELS.map((f) => ({
+                      label: FREQUENCY_LABEL_LABELS[f],
+                      count: result.data.frequencyCounts[f],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>매출 라벨 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    rows={REVENUE_LABELS.map((r) => ({
+                      label: REVENUE_LABEL_LABELS[r],
+                      count: result.data.revenueCounts[r],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>방문 목적별 평균 방문 빈도</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="flex flex-col divide-y text-sm">
+                    {PURCHASE_PURPOSES.map((p) => {
+                      const avg = result.data.purposeAvgFrequency[p];
+                      const overall = result.data.overallAvgFrequency;
+                      const pct = overall > 0 ? Math.round((avg / overall) * 100) : 0;
+                      return (
+                        <li key={p} className="flex items-center justify-between gap-3 py-2">
+                          <span>{PURCHASE_PURPOSE_LABELS[p]}</span>
+                          <span className="flex items-center gap-2 tabular-nums">
+                            <span className="font-medium">{avg.toFixed(1)}회</span>
+                            <span className="text-xs text-muted-foreground">
+                              (전체 평균 대비 {pct}%)
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    전체 평균 방문 빈도: {result.data.overallAvgFrequency.toFixed(1)}회
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>품목 분포</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BarList
+                    unit="건"
+                    rows={ITEM_TYPES.map((it) => ({
+                      label: itemTypeLabel(it),
+                      count: result.data.itemTypeCounts[it],
+                    }))}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>성별 분포</CardTitle>
+                <CardTitle>누적 거래액 상위 고객</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarList
-                  rows={GENDERS.map((g) => ({
-                    label: GENDER_LABELS[g],
-                    count: result.data.genderCounts[g],
-                  }))}
-                />
+                {result.data.topCustomers.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    거래 이력이 있는 고객이 없습니다.
+                  </p>
+                ) : (
+                  <ol className="flex flex-col divide-y text-sm">
+                    {result.data.topCustomers.map((c, i) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-5 shrink-0 text-right text-muted-foreground tabular-nums">
+                            {i + 1}
+                          </span>
+                          <Link href={`/customers/${c.id}`} className="font-medium hover:underline">
+                            {c.name}
+                          </Link>
+                          <span className="text-xs text-muted-foreground">
+                            거래 {c.tradeCount.toLocaleString("ko-KR")}건
+                          </span>
+                        </div>
+                        <span className="tabular-nums font-medium">{formatWon(c.totalAmount)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>빈도 라벨 분포</CardTitle>
+                <CardTitle>누적 거래 수 상위 고객</CardTitle>
               </CardHeader>
               <CardContent>
-                <BarList
-                  rows={FREQUENCY_LABELS.map((f) => ({
-                    label: FREQUENCY_LABEL_LABELS[f],
-                    count: result.data.frequencyCounts[f],
-                  }))}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>매출 라벨 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={REVENUE_LABELS.map((r) => ({
-                    label: REVENUE_LABEL_LABELS[r],
-                    count: result.data.revenueCounts[r],
-                  }))}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>연령대 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={AGE_BUCKETS.map((a) => ({
-                    label: AGE_BUCKET_LABELS[a],
-                    count: result.data.ageBucketCounts[a],
-                  }))}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>유입 경로 분포</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BarList
-                  rows={INFLOW_CHANNELS.map((c) => ({
-                    label: INFLOW_CHANNEL_LABELS[c],
-                    count: result.data.channelCounts[c],
-                  }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  한 고객이 여러 경로를 가질 수 있어 합계가 전체 고객 수와 다를 수 있습니다.
-                </p>
+                {result.data.topCustomersByCount.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    거래 이력이 있는 고객이 없습니다.
+                  </p>
+                ) : (
+                  <ol className="flex flex-col divide-y text-sm">
+                    {result.data.topCustomersByCount.map((c, i) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-5 shrink-0 text-right text-muted-foreground tabular-nums">
+                            {i + 1}
+                          </span>
+                          <Link href={`/customers/${c.id}`} className="font-medium hover:underline">
+                            {c.name}
+                          </Link>
+                          <span className="text-xs text-muted-foreground">
+                            {formatWon(c.totalAmount)}
+                          </span>
+                        </div>
+                        <span className="tabular-nums font-medium">
+                          {c.tradeCount.toLocaleString("ko-KR")}건
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </CardContent>
             </Card>
           </section>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>누적 거래액 상위 고객</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {result.data.topCustomers.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  거래 이력이 있는 고객이 없습니다.
-                </p>
-              ) : (
-                <ol className="flex flex-col divide-y text-sm">
-                  {result.data.topCustomers.map((c, i) => (
-                    <li
-                      key={c.id}
-                      className="flex items-center justify-between gap-3 py-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-5 shrink-0 text-right text-muted-foreground tabular-nums">
-                          {i + 1}
-                        </span>
-                        <Link href={`/customers/${c.id}`} className="font-medium hover:underline">
-                          {c.name}
-                        </Link>
-                        <span className="text-xs text-muted-foreground">
-                          거래 {c.tradeCount.toLocaleString("ko-KR")}건
-                        </span>
-                      </div>
-                      <span className="tabular-nums font-medium">{formatWon(c.totalAmount)}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
     </main>
