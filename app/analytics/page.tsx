@@ -2,9 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GENDER_LABELS, INFLOW_CHANNEL_LABELS } from "@/lib/labels";
-import { GENDERS, INFLOW_CHANNELS } from "@/lib/types/database";
-import { AGE_BUCKETS, AGE_BUCKET_LABELS, GRADE_BUCKETS, GRADE_BUCKET_LABELS } from "@/lib/analytics/summary";
+import {
+  FREQUENCY_LABEL_LABELS,
+  GENDER_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
+import {
+  FREQUENCY_LABELS,
+  GENDERS,
+  INFLOW_CHANNELS,
+  REVENUE_LABELS,
+} from "@/lib/types/database";
+import { AGE_BUCKETS, AGE_BUCKET_LABELS } from "@/lib/analytics/summary";
 import { getCustomerAnalytics } from "@/lib/analytics/queries";
 import { formatWon } from "@/lib/number";
 import { requireUser } from "@/lib/supabase/require-user";
@@ -55,13 +65,27 @@ export default async function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>등급 분포</CardTitle>
+                <CardTitle>빈도 라벨 분포</CardTitle>
               </CardHeader>
               <CardContent>
                 <BarList
-                  rows={GRADE_BUCKETS.map((g) => ({
-                    label: GRADE_BUCKET_LABELS[g],
-                    count: result.data.gradeCounts[g],
+                  rows={FREQUENCY_LABELS.map((f) => ({
+                    label: FREQUENCY_LABEL_LABELS[f],
+                    count: result.data.frequencyCounts[f],
+                  }))}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>매출 라벨 분포</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarList
+                  rows={REVENUE_LABELS.map((r) => ({
+                    label: REVENUE_LABEL_LABELS[r],
+                    count: result.data.revenueCounts[r],
                   }))}
                 />
               </CardContent>

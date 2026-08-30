@@ -55,7 +55,9 @@ export async function createCustomer(
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
       purchase_purposes: parsed.data.purchase_purposes,
-      grade: parsed.data.grade,
+      frequency_label: parsed.data.frequency_label,
+      revenue_label: parsed.data.revenue_label,
+      referred_by_customer_id: parsed.data.referred_by_customer_id,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,
@@ -96,6 +98,15 @@ export async function updateCustomer(
     };
   }
 
+  if (parsed.data.referred_by_customer_id === id) {
+    return {
+      status: "error",
+      message: "추천인으로 자기 자신을 선택할 수 없습니다.",
+      fieldErrors: { referred_by_customer_id: "추천인으로 자기 자신을 선택할 수 없습니다." },
+      values: raw,
+    };
+  }
+
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -118,7 +129,9 @@ export async function updateCustomer(
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
       purchase_purposes: parsed.data.purchase_purposes,
-      grade: parsed.data.grade,
+      frequency_label: parsed.data.frequency_label,
+      revenue_label: parsed.data.revenue_label,
+      referred_by_customer_id: parsed.data.referred_by_customer_id,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,

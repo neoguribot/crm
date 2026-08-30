@@ -79,9 +79,13 @@ export function isItemTypeAllowedForTradeType(
 export const GENDERS = ["UNKNOWN", "MALE", "FEMALE"] as const;
 export type Gender = (typeof GENDERS)[number];
 
-/** 등급/라벨. 수동 입력, DB 저장. */
-export const CUSTOMER_GRADES = ["VIP", "우수", "일반", "신규"] as const;
-export type CustomerGrade = (typeof CUSTOMER_GRADES)[number];
+/** 빈도 라벨(재방문 빈도). 수동 입력, DB 저장(자동 추천은 참고 배지). */
+export const FREQUENCY_LABELS = ["신규", "단골"] as const;
+export type FrequencyLabel = (typeof FREQUENCY_LABELS)[number];
+
+/** 매출 라벨(거래 금액). 수동 입력, DB 저장(자동 추천은 참고 배지). */
+export const REVENUE_LABELS = ["일반", "우수", "VIP"] as const;
+export type RevenueLabel = (typeof REVENUE_LABELS)[number];
 
 /** 거래 완료 여부. DB에는 정수 코드로 저장(1=완료, 2=진행중). */
 export const TRADE_STATUSES = ["DONE", "IN_PROGRESS"] as const;
@@ -121,7 +125,9 @@ export interface Customer {
   address: string | null;
   inflow_channels: InflowChannel[];
   purchase_purposes: PurchasePurpose[];
-  grade: CustomerGrade | null;
+  frequency_label: FrequencyLabel;
+  revenue_label: RevenueLabel;
+  referred_by_customer_id: string | null;
   /** 고객 등록일 (기본값 오늘, 수정 가능) */
   registered_on: IsoDateString;
   /** 첫 거래일자 (선택) */
@@ -232,7 +238,9 @@ export interface CustomerCreateInput {
   address?: string | null;
   inflow_channels: InflowChannel[];
   purchase_purposes: PurchasePurpose[];
-  grade?: CustomerGrade | null;
+  frequency_label?: FrequencyLabel;
+  revenue_label?: RevenueLabel;
+  referred_by_customer_id?: string | null;
   registered_on: IsoDateString;
   first_trade_date?: IsoDateString | null;
   last_contact_date?: IsoDateString | null;

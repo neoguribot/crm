@@ -2,10 +2,11 @@ import { z } from "zod";
 
 import { isValidIsoDate, todayInSeoul } from "@/lib/date";
 import {
-  CUSTOMER_GRADES,
+  FREQUENCY_LABELS,
   GENDERS,
   INFLOW_CHANNELS,
   PURCHASE_PURPOSES,
+  REVENUE_LABELS,
 } from "@/lib/types/database";
 
 const MEMO_MAX = 1000;
@@ -73,15 +74,13 @@ export const customerInputSchema = z
       .array(z.enum(INFLOW_CHANNELS))
       .min(1, "유입 경로를 1개 이상 선택해 주세요."),
     purchase_purposes: z.array(z.enum(PURCHASE_PURPOSES)).default([]),
-    grade: z
+    frequency_label: z.enum(FREQUENCY_LABELS).default("신규"),
+    revenue_label: z.enum(REVENUE_LABELS).default("일반"),
+    referred_by_customer_id: z
       .string()
       .trim()
-      .transform((v) => (v === "" ? null : v))
-      .nullable()
-      .refine(
-        (v) => v === null || (CUSTOMER_GRADES as readonly string[]).includes(v),
-        "올바른 등급을 선택해 주세요.",
-      ) as z.ZodType<(typeof CUSTOMER_GRADES)[number] | null>,
+      .transform((v) => (v === "" || v === "NONE" ? null : v))
+      .nullable(),
     registered_on: isoDate,
     first_trade_date: optionalIsoDate,
     last_contact_date: optionalIsoDate,
@@ -120,7 +119,9 @@ export function customerFormDataToObject(formData: FormData) {
     address: String(formData.get("address") ?? ""),
     inflow_channels: formData.getAll("inflow_channels").map(String),
     purchase_purposes: formData.getAll("purchase_purposes").map(String),
-    grade: String(formData.get("grade") ?? ""),
+    frequency_label: String(formData.get("frequency_label") ?? "신규"),
+    revenue_label: String(formData.get("revenue_label") ?? "일반"),
+    referred_by_customer_id: String(formData.get("referred_by_customer_id") ?? ""),
     registered_on: String(formData.get("registered_on") ?? ""),
     first_trade_date: String(formData.get("first_trade_date") ?? ""),
     last_contact_date: String(formData.get("last_contact_date") ?? ""),

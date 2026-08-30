@@ -14,8 +14,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
-import { INFLOW_CHANNELS, PURCHASE_PURPOSES } from "@/lib/types/database";
+import {
+  FREQUENCY_LABEL_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
+import {
+  FREQUENCY_LABELS,
+  INFLOW_CHANNELS,
+  PURCHASE_PURPOSES,
+  REVENUE_LABELS,
+} from "@/lib/types/database";
 import {
   SEARCH_MAX_LENGTH,
   type CustomerFilters,
@@ -34,6 +44,16 @@ const CHANNEL_ITEMS: Record<string, string> = {
   ...Object.fromEntries(
     INFLOW_CHANNELS.map((c) => [c, INFLOW_CHANNEL_LABELS[c]]),
   ),
+};
+const FREQUENCY_ITEMS: Record<string, string> = {
+  [ALL]: "전체",
+  ...Object.fromEntries(
+    FREQUENCY_LABELS.map((c) => [c, FREQUENCY_LABEL_LABELS[c]]),
+  ),
+};
+const REVENUE_ITEMS: Record<string, string> = {
+  [ALL]: "전체",
+  ...Object.fromEntries(REVENUE_LABELS.map((c) => [c, REVENUE_LABEL_LABELS[c]])),
 };
 export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
   const router = useRouter();
@@ -54,6 +74,16 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
 
     const channel = String(form.get("channel") ?? "");
     if (channel && channel !== ALL) params.set("channel", channel);
+
+    const frequencyLabel = String(form.get("frequencyLabel") ?? "");
+    if (frequencyLabel && frequencyLabel !== ALL) {
+      params.set("frequencyLabel", frequencyLabel);
+    }
+
+    const revenueLabel = String(form.get("revenueLabel") ?? "");
+    if (revenueLabel && revenueLabel !== ALL) {
+      params.set("revenueLabel", revenueLabel);
+    }
 
     let visitFrom = String(form.get("visitFrom") ?? "").trim();
     let visitTo = String(form.get("visitTo") ?? "").trim();
@@ -120,6 +150,48 @@ export function CustomerFilterBar({ filters }: { filters: CustomerFilters }) {
               {INFLOW_CHANNELS.map((code) => (
                 <SelectItem key={code} value={code}>
                   {INFLOW_CHANNEL_LABELS[code]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>빈도 라벨</Label>
+          <Select
+            name="frequencyLabel"
+            items={FREQUENCY_ITEMS}
+            defaultValue={filters.frequencyLabel ?? ALL}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>전체</SelectItem>
+              {FREQUENCY_LABELS.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {FREQUENCY_LABEL_LABELS[code]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>매출 라벨</Label>
+          <Select
+            name="revenueLabel"
+            items={REVENUE_ITEMS}
+            defaultValue={filters.revenueLabel ?? ALL}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>전체</SelectItem>
+              {REVENUE_LABELS.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {REVENUE_LABEL_LABELS[code]}
                 </SelectItem>
               ))}
             </SelectContent>

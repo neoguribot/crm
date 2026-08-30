@@ -49,7 +49,7 @@ npm run build          # 프로덕션 빌드
 ## 데이터베이스 (Supabase)
 
 적용 방법·RLS·인덱스·numeric 처리 근거는 [`supabase/README.md`](./supabase/README.md).
-마이그레이션은 `supabase/migrations/0001` ~ `0018` 을 번호 순서대로 SQL Editor 에
+마이그레이션은 `supabase/migrations/0001` ~ `0020` 을 번호 순서대로 SQL Editor 에
 붙여넣어 적용한다. 각 파일 상단 주석에 목적이 적혀 있다.
 
 핵심만 요약하면:
@@ -61,6 +61,8 @@ npm run build          # 프로덕션 빌드
 - `0015`, `0018` — 홈 대시보드·종합분석용 집계 RPC
 - `0016` — 거래 삭제 RLS 정책
 - `0017` — 시세를 "하루 1건 덮어쓰기"가 아닌 "등록마다 쌓이는 이력"으로 전환
+- `0019` — 단일 `grade` 를 빈도 라벨(신규/단골)·매출 라벨(일반/우수/VIP) 두 축으로 분리
+- `0020` — 고객 간 추천인 연결(`referred_by_customer_id`, 자기참조 FK)
 
 발표·시연용 가상 샘플 데이터: [`docs/DEMO_DATA.md`](./docs/DEMO_DATA.md), `supabase/seed/demo_data.sql`.
 
@@ -83,15 +85,19 @@ Supabase 대시보드 > Authentication > Users > **Add user** > 이메일·비�
 
 ## 기능 범위
 
-1. 고객 정보 관리 — 조회·등록·수정·삭제, 성별·등급·유입경로·방문목적 등
+1. 고객 정보 관리 — 조회·등록·수정·삭제, 성별·빈도 라벨(신규/단골)·매출 라벨(일반/우수/
+   VIP)·유입경로·방문목적·추천인(기존 고객 연결) 등
 2. 거래 정보 관리 — 조회·등록·수정·삭제(`/transactions`), 고객 상세 안에서도 등록 가능
 3. 시세 정보 관리 — 시세 이력 등록·수정·삭제, 목표가 도달 알림(`/prices`)
 4. 홈 대시보드 — 오늘의 고객 관리 일정(필터 탭), 거래 고객 수(어제/오늘/주/월/년),
    매출 지표, 목표 도달 현황(월 매출 목표 인라인 수정), 최근 거래, 방문목적별 통계
 5. 캘린더 — 월 단위로 고객 일정 보기(`/calendar`)
-6. 종합 분석 — 성별·등급·연령대·유입경로 분포, 누적 거래액 상위 고객(`/analytics`)
-7. 고객 상세의 일정 섹션 — 문의/예약/맞춤주문/재방문/시세알림/생일/안부 등 여러 건
-   동시 관리, 진행 중인 거래와 연동 가능
+6. 종합 분석 — 성별·빈도 라벨·매출 라벨·연령대·유입경로 분포, 누적 거래액 상위
+   고객(`/analytics`)
+7. 고객 상세 — 일정 섹션(문의/예약/맞춤주문/재방문/시세알림/생일/안부 등 여러 건 동시
+   관리, 진행 중인 거래와 연동), 지표 카드(누적 매출액·거래 횟수·평균 재방문 주기·
+   라벨, 차트 없이 숫자로만 표시), 추천인 표시
+8. 고객 목록 세그먼트 필터(방문목적+빈도/매출 라벨 조합) + 필터링된 목록 연락처 일괄 복사
 
 ### 다음 단계로 미룬 기능
 
@@ -133,7 +139,7 @@ components/
 lib/
   constants.ts labels.ts date.ts calendar.ts number.ts phone.ts
   supabase/    env·client·server·middleware·require-user·auth-errors
-  customers/   queries·filters·recent-visit·match·grade-suggestion
+  customers/   queries·filters·recent-visit·match·label-suggestion·revisit-interval
   trades/      queries·holdings
   events/      queries (고객 일정)
   prices/      queries·actions·target
@@ -144,7 +150,7 @@ lib/
   validation/  customer·trade-record·customer-event·flatten
   types/       database.ts (앱 레벨 타입) codes.ts (DB 정수 코드 변환)
 supabase/
-  migrations/  0001 ~ 0018
+  migrations/  0001 ~ 0020
   seed/        demo_data.sql
   README.md
 docs/

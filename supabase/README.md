@@ -1,7 +1,7 @@
 # Supabase 설정
 
 이 디렉터리는 데이터베이스 스키마(마이그레이션 SQL)와 적용 방법을 담는다.
-`0001` ~ `0018` 을 번호 순서대로 적용하면 현재 앱과 일치하는 스키마가 된다.
+`0001` ~ `0020` 을 번호 순서대로 적용하면 현재 앱과 일치하는 스키마가 된다.
 
 ## 1. 환경변수
 
@@ -46,8 +46,11 @@ Project Settings > API 에서 확인한다.
    - `0017_gold_price_history.sql` — 시세를 "하루 1건 덮어쓰기"에서 "등록마다 쌓이는
      이력"으로 전환(`price_date` → `registered_at timestamptz`)
    - `0018_customer_analytics.sql` — 종합 분석 화면용 집계 RPC(`customer_analytics()`)
+   - `0019_customer_labels.sql` — 단일 `grade` → 빈도 라벨(`frequency_label`, 신규/단골)·
+     매출 라벨(`revenue_label`, 일반/우수/VIP) 두 축으로 분리, `customer_analytics()` 재작성
+   - `0020_customer_referrer.sql` — 고객 간 추천인 연결(`referred_by_customer_id`, 자기참조 FK)
 3. 각 스크립트는 멱등이라 여러 번 실행해도 안전하다.
-4. 스키마 변경은 기존 파일을 고치지 말고 `0019_*.sql` 처럼 새 파일로 추가한다.
+4. 스키마 변경은 기존 파일을 고치지 말고 `0021_*.sql` 처럼 새 파일로 추가한다.
 
 ### 방법 B — Supabase CLI
 

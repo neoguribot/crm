@@ -14,9 +14,16 @@ import {
   hasActiveFilters,
   parseCustomerFilters,
 } from "@/lib/customers/filters";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { Badge } from "@/components/ui/badge";
+import {
+  FREQUENCY_LABEL_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/require-user";
 import { AppliedFilters } from "@/app/customers/applied-filters";
+import { CopyContactsButton } from "@/app/customers/copy-contacts-button";
 import { CustomerFilterBar } from "@/app/customers/customer-filter-bar";
 import { DeleteCustomerButton } from "@/app/customers/delete-customer-button";
 
@@ -80,9 +87,14 @@ export default async function CustomersPage({
         </Card>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">
-            총 {result.data.length}명
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              총 {result.data.length}명
+            </p>
+            <CopyContactsButton
+              customers={result.data.map((c) => ({ name: c.name, phone: c.phone }))}
+            />
+          </div>
           <ul className="flex flex-col gap-3">
             {result.data.map((customer) => (
               <li key={customer.id}>
@@ -95,8 +107,16 @@ export default async function CustomersPage({
                       >
                         {customer.name}
                       </Link>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {customer.phone}
+                      <span className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {FREQUENCY_LABEL_LABELS[customer.frequency_label]}
+                        </Badge>
+                        <Badge variant="outline">
+                          {REVENUE_LABEL_LABELS[customer.revenue_label]}
+                        </Badge>
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {customer.phone}
+                        </span>
                       </span>
                     </CardTitle>
                   </CardHeader>

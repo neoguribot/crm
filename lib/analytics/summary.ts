@@ -1,8 +1,11 @@
 import {
+  FREQUENCY_LABELS,
   INFLOW_CHANNELS,
-  type CustomerGrade,
+  REVENUE_LABELS,
+  type FrequencyLabel,
   type Gender,
   type InflowChannel,
+  type RevenueLabel,
 } from "@/lib/types/database";
 
 export const AGE_BUCKETS = [
@@ -26,17 +29,6 @@ export const AGE_BUCKET_LABELS: Record<AgeBucket, string> = {
   UNKNOWN: "미상",
 };
 
-/** 등급 미지정 고객을 포함한 표시용 키. */
-export type GradeBucket = CustomerGrade | "NONE";
-export const GRADE_BUCKETS: GradeBucket[] = ["VIP", "우수", "일반", "신규", "NONE"];
-export const GRADE_BUCKET_LABELS: Record<GradeBucket, string> = {
-  VIP: "VIP",
-  우수: "우수",
-  일반: "일반",
-  신규: "신규",
-  NONE: "미지정",
-};
-
 export type TopCustomer = {
   id: string;
   name: string;
@@ -47,7 +39,8 @@ export type TopCustomer = {
 export type CustomerAnalytics = {
   customerCount: number;
   genderCounts: Record<Gender, number>;
-  gradeCounts: Record<GradeBucket, number>;
+  frequencyCounts: Record<FrequencyLabel, number>;
+  revenueCounts: Record<RevenueLabel, number>;
   channelCounts: Record<InflowChannel, number>;
   ageBucketCounts: Record<AgeBucket, number>;
   topCustomers: TopCustomer[];
@@ -80,13 +73,21 @@ export function normalizeCustomerAnalytics(raw: unknown): CustomerAnalytics {
     FEMALE: toCount(genderRaw.FEMALE),
   } as Record<Gender, number>;
 
-  const gradeRaw =
-    typeof r.grade_counts === "object" && r.grade_counts !== null
-      ? (r.grade_counts as Record<string, unknown>)
+  const frequencyRaw =
+    typeof r.frequency_counts === "object" && r.frequency_counts !== null
+      ? (r.frequency_counts as Record<string, unknown>)
       : {};
-  const gradeCounts = Object.fromEntries(
-    GRADE_BUCKETS.map((g) => [g, toCount(gradeRaw[g])]),
-  ) as Record<GradeBucket, number>;
+  const frequencyCounts = Object.fromEntries(
+    FREQUENCY_LABELS.map((f) => [f, toCount(frequencyRaw[f])]),
+  ) as Record<FrequencyLabel, number>;
+
+  const revenueRaw =
+    typeof r.revenue_counts === "object" && r.revenue_counts !== null
+      ? (r.revenue_counts as Record<string, unknown>)
+      : {};
+  const revenueCounts = Object.fromEntries(
+    REVENUE_LABELS.map((rv) => [rv, toCount(revenueRaw[rv])]),
+  ) as Record<RevenueLabel, number>;
 
   const channelRaw =
     typeof r.channel_counts === "object" && r.channel_counts !== null
@@ -118,7 +119,8 @@ export function normalizeCustomerAnalytics(raw: unknown): CustomerAnalytics {
   return {
     customerCount: toCount(r.customer_count),
     genderCounts,
-    gradeCounts,
+    frequencyCounts,
+    revenueCounts,
     channelCounts,
     ageBucketCounts,
     topCustomers,
