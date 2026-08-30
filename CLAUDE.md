@@ -70,7 +70,8 @@
 - 금액 `numeric(15,0)`, 중량 `numeric(10,3)`, 시세 `numeric(15,0)`
 - 최근 방문일 / 리마인드 상태는 저장하지 않고 조회 시 계산
   - 최근 방문일 = `max(trade_records.trade_date)` ∨ `customers.registered_on`
-  - 리마인드 분류(`customer_events.event_date` 기준): 지남 / 7일 이내 / 30일 이내 / 30일 이후 / 일정 없음
+  - 리마인드 분류(`customer_events.event_date` 기준, 홈 위젯 탭): 오늘(기본) / 기한 지남 / 7일 이내
+    (8일 이후는 어느 탭에도 표시하지 않음)
 - 시세(`gold_prices`)는 등록할 때마다 새 이력(`registered_at`)이 쌓인다 — 하루 1건
   덮어쓰기 아님. 목표가 도달 알림의 `dedupe_key` 는 "목표+이번 시세 등록 건" 단위라
   같은 날 여러 번 다시 도달해도 각각 알림이 생긴다.
