@@ -6,7 +6,7 @@
 
 - **파일**: `supabase/seed/demo_data.sql`
 - **규모**: 고객 **50명**(절차적으로 생성, 매번 정확한 인원은 아래 §4 검증 SQL로 확인),
-  거래는 고객당 0~20건(대부분 3~8건), 일정 약 16건
+  거래는 고객당 0~20건(대부분 3~8건), 일정 약 16건, 매수 희망가 약 13명, 알림 최대 3건
 - **스키마 기준**: `supabase/migrations/0001` ~ `0025` 전부 적용된 상태
 
 ## 0. v1 → v2: 손으로 쓴 18명 고정 데이터 → 절차적 생성 50명
@@ -43,10 +43,18 @@
 
 ## 2. 적용 방법 및 분포 설계
 
+> ⚠️ **검증 상태**: 1~6단계(고객·추천인·거래·라벨·일정)는 이 `.sql` 파일 그대로
+> Supabase SQL Editor 에서 실제 실행해 성공을 확인했다. 7~8단계(매수 희망가·알림)는
+> 같은 로직을 파이썬으로 옮겨 REST API 로 실행해서 정상 동작(고객 50 / 거래 334 /
+> 일정 16 / 매수 희망가 13 / 알림 2)을 확인했지만, **이 `.sql` 파일 자체로 7~8단계를
+> SQL Editor 에서 직접 실행해본 적은 아직 없다.** 로직은 1:1로 옮겨 적었지만, 처음
+> 실행할 때 오류가 나면(전에 PL/pgSQL 컬럼 별칭이 변수명과 겹쳐 오류 났던 사례가
+> 있다) 오류 메시지를 그대로 알려 달라.
+
 1. 위 1번대로 `v_raw` 를 채운다.
 2. Supabase 대시보드 > **SQL Editor > New query** 에 `demo_data.sql` **전체**를 붙여넣는다.
 3. **Run**.
-4. 성공 시 `NOTICE: 샘플 재생성 완료 — 이 사용자의 [DEMO] 고객 50 명, 거래 N 건, 일정 16 건.`
+4. 성공 시 `NOTICE: 샘플 재생성 완료 — 이 사용자의 [DEMO] 고객 50 명, 거래 N 건, 일정 16 건, 매수 희망가 13 건, 알림 N 건.`
 
 생성 로직(스크립트 상단 주석과 동일, 클라이언트 제공 영업 특성 반영):
 
@@ -63,6 +71,9 @@
 | 추천인 | 지인추천 유입 고객의 약 60%가 이전에 생성된(주로 40~60대) 다른 데모 고객을 추천인으로 가짐 |
 | 가격 | 24K 1돈(3.75g)·은 1g 시세를 "오늘 근사치 ~ 5개월 전 근사치"로 선형 보간 + 약간의 일별 변동을 준 발표용 근사값(실시간 시세 아님) |
 | 라벨 | 빈도·매출 라벨은 앱의 자동 추천 기준과 동일하게 맞춰서 저장(빈도: 누적 거래 2건 이상 단골 / 매출: 최근 3개월 합산 거래액 기준) |
+| 매수 희망가 | 투자성(매입/골드바) 고객 위주로 약 13명에게 배정. 대부분 현재 시세 근사값보다 낮게(미도달), 일부는 살짝 높게(이미 도달) |
+| 알림 | 이미 "도달" 상태인 매수 희망가 중 최대 3건에 대해 벨 아이콘용 알림을 미리 생성 |
+| 시세 이력(`gold_prices`) | **일부러 시드하지 않음** — `[DEMO]` 같은 표시용 컬럼이 없는 owner 단위 테이블이라 안전하게 구분·재생성할 방법이 없음. `/prices`에서 오늘 시세를 직접 등록해 시연(매수 희망가 일부가 이미 "도달"로 설정돼 있어 알림이 자연스럽게 뜬다) |
 
 ### 안전장치
 
@@ -152,7 +163,18 @@ where owner_id = '<UUID>' and memo like '[DEMO]%' group by 1 order by 1;
 select count(*) from customers
 where owner_id = '<UUID>' and memo like '[DEMO]%' and referred_by_customer_id is not null;
 
--- (8) 홈 대시보드 / 종합분석 RPC 결과 (로그인 세션에서만 owner 스코프가 맞음.
+-- (8) 매수 희망가 — 기대: 약 13건, 그중 목표가가 585,000원(근사 현재 시세) 이상인
+--     "이미 도달" 건이 몇 건 있어야 함(아래 (9)의 알림과 연결됨)
+select count(*) as total,
+  count(*) filter (where target_price_per_don >= 585000) as already_reached
+from price_targets t join customers c on c.id = t.customer_id
+where c.owner_id = '<UUID>' and c.memo like '[DEMO]%';
+
+-- (9) 알림(벨 아이콘용, dedupe_key 가 demo-seed: 로 시작하는 것만) — 기대: 최대 3건
+select count(*) from notifications n join customers c on c.id = n.customer_id
+where c.owner_id = '<UUID>' and c.memo like '[DEMO]%' and n.dedupe_key like 'demo-seed:%';
+
+-- (10) 홈 대시보드 / 종합분석 RPC 결과 (로그인 세션에서만 owner 스코프가 맞음.
 --     SQL Editor 에서는 0 이 나올 수 있으니 실제 검증은 브라우저로 한다.)
 select public.dashboard_summary();
 select public.customer_analytics();

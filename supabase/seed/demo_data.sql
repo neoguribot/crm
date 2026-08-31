@@ -18,6 +18,11 @@
 --     40~60대에 더 집중
 --   - 가격은 24K 1돈(3.75g)·은 1g 시세를 오늘 기준 근사치에서 5개월 전 근사치로
 --     선형 보간 + 약간의 일별 변동을 준 "발표용 근사 시세"다(실시간 시세 아님).
+--   - 매수 희망가(price_targets)를 투자성 고객 위주로 약 13명에게 배정한다. 일부는
+--     현재 시세 근사값보다 살짝 높게 잡아 두어(이미 "도달" 상태), 발표 중 `/prices`
+--     에서 오늘 시세를 실제로 등록하면 알림이 자연스럽게 뜨도록 했다. gold_prices
+--     (시세 이력) 자체는 일부러 시드하지 않는다 — 고객에 속하지 않는 owner 단위
+--     테이블이라 [DEMO] 같은 태그로 안전하게 구분·재생성할 방법이 없기 때문이다.
 --
 -- 안전장치:
 --  1) 아래 v_raw 에 대상 테스트 사용자 UUID 를 넣지 않으면 실행이 중단된다.
@@ -35,6 +40,12 @@
 -- 적용: Supabase 대시보드 > SQL Editor 에 붙여넣고, v_raw 를 채운 뒤 실행.
 -- 적용 후 실제 생성된 값은 docs/DEMO_DATA.md 의 검증 SQL로 직접 확인한다
 -- (절차적 생성이라 이 파일만 보고 정확한 수치를 알 수 없다).
+--
+-- ⚠️ 검증 상태: 1~6단계(고객·추천인·거래·라벨·일정)는 이 SQL Editor 경로로 실제
+-- 실행해 성공을 확인했다. 7~8단계(매수 희망가·알림)는 같은 로직을 파이썬으로
+-- 옮겨 REST API 로 실행해서 정상 동작을 확인했지만, 이 .sql 파일 자체로 7~8단계를
+-- SQL Editor 에서 직접 실행해본 적은 아직 없다. 처음 실행할 때 오류가 나면(전에
+-- 컬럼 별칭 충돌 같은 사례가 있었다) 오류 메시지를 그대로 보고해 달라.
 -- =====================================================================
 
 do $$
@@ -102,7 +113,15 @@ declare
   ev_labels text[] := array['문의','예약 확인','맞춤 제작 진행 상황','재방문 리마인드',
                              '시세 알림 상담','생일 축하 연락','안부 연락'];
 
-  v_cust int; v_trade int; v_event int;
+  pt_targets int[];
+  v_pt_price numeric; v_pt_note text; v_pt_id uuid;
+  pt_notes text[] := array['이 가격대로 떨어지면 연락 주세요','추가 매수 희망',
+                            '분산매수 목표가','지인 추천으로 관심 있어 하심'];
+
+  rec record;
+  v_notif_id uuid;
+
+  v_cust int; v_trade int; v_event int; v_pt int; v_notif int;
 begin
   if v_raw = 'PUT-YOUR-TEST-USER-UUID-HERE' or length(coalesce(v_raw, '')) = 0 then
     raise exception '대상 테스트 사용자 UUID 를 v_raw 에 입력한 뒤 다시 실행하세요.';
@@ -427,12 +446,89 @@ begin
             '[DEMO] ' || ev_labels[v_etype], v_edone);
   end loop;
 
+  -- ================================================================
+  -- 7단계: 매수 희망가(price_targets) 약 13명 — 투자성(매입/골드바) 고객 위주로
+  -- 배정한다. customer_id 가 FK on delete cascade 라 고객 삭제(1단계 재생성)에
+  -- 맞춰 함께 정리된다.
+  --
+  -- ⚠️ gold_prices(시세 이력)는 일부러 시드하지 않는다 — 이 테이블엔 [DEMO] 같은
+  -- 표시용 컬럼이 없어서(고객에 속한 데이터가 아니라 owner 단위 이력) 재실행할
+  -- 때마다 안전하게 구분해서 지울 방법이 없다. 대신 목표가 일부를 현재 시세
+  -- 근사값보다 살짝 높게 잡아 두었으니, 발표 중 `/prices` 에서 오늘 시세를 실제로
+  -- 등록하면 그 중 한두 건이 자연스럽게 "도달" 알림으로 뜬다(라이브 데모용).
+  -- ================================================================
+  pt_targets := (
+    select array_agg(x order by random()) from (
+      (select gk as x from generate_series(1, n) gk
+       where cust_purpose[gk] in ('PURCHASE','GOLD_BAR')
+       order by random() limit 10)
+      union all
+      (select gk as x from generate_series(1, n) gk
+       where cust_purpose[gk] not in ('PURCHASE','GOLD_BAR')
+       order by random() limit 3)
+    ) t
+  );
+
+  foreach i in array pt_targets loop
+    -- 0.90~1.02 배수: 대부분은 현재 시세보다 낮게(아직 미도달), 일부는 살짝 높게
+    -- 잡아 두어(이미 도달) 발표 중 실제 시세 등록 시 알림이 뜨도록 한다.
+    v_pt_price := round(v_gold_now * (0.90 + random() * 0.12) / 1000) * 1000;
+    v_pt_note := case when random() < 0.4
+      then pt_notes[1 + floor(random()*4)::int]
+      else null end;
+    v_pt_id := md5(v_uid::text || ':demo-price-target:c' || lpad(i::text,2,'0'))::uuid;
+
+    insert into public.price_targets (id, owner_id, customer_id, target_price_per_don, note)
+    values (v_pt_id, v_uid, cust_id[i], v_pt_price, v_pt_note)
+    on conflict (customer_id) do update
+      set target_price_per_don = excluded.target_price_per_don, note = excluded.note;
+  end loop;
+
   select count(*) into v_cust
     from public.customers where owner_id = v_uid and memo like '[DEMO]%';
   select count(*) into v_trade
     from public.trade_records where owner_id = v_uid and memo like '[DEMO]%';
   select count(*) into v_event
     from public.customer_events where owner_id = v_uid and memo like '[DEMO]%';
+  select count(*) into v_pt
+    from public.price_targets t
+    join public.customers c on c.id = t.customer_id
+    where c.owner_id = v_uid and c.memo like '[DEMO]%';
 
-  raise notice '샘플 재생성 완료 — 이 사용자의 [DEMO] 고객 % 명, 거래 % 건, 일정 % 건.', v_cust, v_trade, v_event;
+  -- ================================================================
+  -- 8단계: 알림 벨 아이콘 데모용 — 이미 "도달" 상태(목표가 ≥ 오늘 근사 시세)인
+  -- 매수 희망가 최대 3건에 대해 미리 알림을 만들어 둔다. dedupe_key 는 실제 앱이
+  -- 만드는 형식(target:<id>:<gold_price_id>)과 절대 겹치지 않는 "demo-seed:"
+  -- 접두사를 쓴다. customer_id 가 FK on delete cascade 라 재생성 시 함께 정리된다.
+  -- ================================================================
+  for rec in
+    select t.id as target_id, t.customer_id, t.target_price_per_don, c.name as customer_name
+    from public.price_targets t
+    join public.customers c on c.id = t.customer_id
+    where c.owner_id = v_uid and c.memo like '[DEMO]%'
+      and t.target_price_per_don >= v_gold_now
+    order by random()
+    limit 3
+  loop
+    v_notif_id := md5(v_uid::text || ':demo-notification:' || rec.target_id::text)::uuid;
+    insert into public.notifications
+      (id, owner_id, type, customer_id, title, body, dedupe_key, created_at)
+    values (
+      v_notif_id, v_uid, 'PRICE_TARGET_REACHED', rec.customer_id,
+      rec.customer_name || ' 고객의 매수 희망 가격에 도달했습니다.',
+      '매수 희망 ' || to_char(rec.target_price_per_don, 'FM999,999,999') || '원/돈 · 현재 '
+        || to_char(v_gold_now, 'FM999,999,999') || '원/돈 · 전화 상담 추천',
+      'demo-seed:' || rec.target_id::text,
+      now() - ((floor(random()*48))::int || ' hours')::interval
+    )
+    on conflict (id) do nothing;
+  end loop;
+
+  select count(*) into v_notif
+    from public.notifications n
+    join public.customers c on c.id = n.customer_id
+    where c.owner_id = v_uid and c.memo like '[DEMO]%' and n.dedupe_key like 'demo-seed:%';
+
+  raise notice '샘플 재생성 완료 — 이 사용자의 [DEMO] 고객 % 명, 거래 % 건, 일정 % 건, 매수 희망가 % 건, 알림 % 건.',
+    v_cust, v_trade, v_event, v_pt, v_notif;
 end $$;
