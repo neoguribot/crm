@@ -22,11 +22,13 @@ export function DateInput({
   className,
   defaultValue,
   onInput,
+  ref,
   ...props
 }: React.ComponentProps<"input">) {
   return (
     <input
       {...props}
+      ref={ref}
       type="text"
       inputMode="numeric"
       autoComplete="off"

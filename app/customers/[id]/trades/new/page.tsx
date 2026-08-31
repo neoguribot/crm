@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "거래 등록",
 };
 
+// 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
+export const dynamic = "force-dynamic";
+
 export default async function NewTradePage({
   params,
 }: {

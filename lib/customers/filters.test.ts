@@ -27,16 +27,32 @@ describe("parseCustomerFilters", () => {
     expect(parseCustomerFilters({ q: long }).q.length).toBe(SEARCH_MAX_LENGTH);
   });
 
-  it("허용된 구매목적·유입경로만 수용", () => {
-    expect(parseCustomerFilters({ purpose: "GOLD_BAR" }).purpose).toBe(
+  it("허용된 구매목적·유입경로만 수용(다중 선택)", () => {
+    expect(parseCustomerFilters({ purpose: ["GOLD_BAR", "예물"] }).purposes).toEqual([
       "GOLD_BAR",
-    );
-    expect(parseCustomerFilters({ purpose: "예물" }).purpose).toBeNull();
-    expect(parseCustomerFilters({ purpose: "NOPE" }).purpose).toBeNull();
-    expect(parseCustomerFilters({ channel: "CARROT_MARKET" }).channel).toBe(
-      "CARROT_MARKET",
-    );
-    expect(parseCustomerFilters({ channel: "hack" }).channel).toBeNull();
+    ]);
+    expect(parseCustomerFilters({ purpose: "NOPE" }).purposes).toEqual([]);
+    expect(
+      parseCustomerFilters({ channel: ["CARROT_MARKET", "WALK_IN"] }).channels,
+    ).toEqual(["CARROT_MARKET", "WALK_IN"]);
+    expect(parseCustomerFilters({ channel: "hack" }).channels).toEqual([]);
+  });
+
+  it("중복 값은 한 번만 남긴다", () => {
+    expect(
+      parseCustomerFilters({ purpose: ["GOLD_BAR", "GOLD_BAR"] }).purposes,
+    ).toEqual(["GOLD_BAR"]);
+  });
+
+  it("허용된 빈도·매출 라벨만 수용(다중 선택)", () => {
+    expect(parseCustomerFilters({ frequencyLabel: "단골" }).frequencyLabels).toEqual([
+      "단골",
+    ]);
+    expect(parseCustomerFilters({ frequencyLabel: "일반" }).frequencyLabels).toEqual([]);
+    expect(
+      parseCustomerFilters({ revenueLabel: ["VIP", "우수"] }).revenueLabels,
+    ).toEqual(["VIP", "우수"]);
+    expect(parseCustomerFilters({ revenueLabel: "다이아" }).revenueLabels).toEqual([]);
   });
 
   it("방문일 구간: 유효한 날짜만 수용", () => {
@@ -62,7 +78,7 @@ describe("parseCustomerFilters", () => {
     expect(p.visitTo).toBe("2026-09-10");
   });
 
-  it("배열 파라미터는 첫 값만", () => {
+  it("배열 파라미터는 첫 값만(검색어)", () => {
     expect(parseCustomerFilters({ q: ["김", "이"] }).q).toBe("김");
   });
 
@@ -76,16 +92,20 @@ describe("buildCustomerSearchParams", () => {
     expect(buildCustomerSearchParams(EMPTY_FILTERS).toString()).toBe("");
   });
 
-  it("설정된 값만 직렬화", () => {
+  it("설정된 값만 직렬화(다중 선택은 반복 파라미터)", () => {
     const qs = buildCustomerSearchParams(
       filters({
         q: "김",
-        purpose: "GOLD_BAR",
+        purposes: ["GOLD_BAR", "STONE_PRODUCT"],
+        frequencyLabels: ["단골"],
+        revenueLabels: ["VIP"],
         visitFrom: "2026-08-01",
       }),
     );
     expect(qs.get("q")).toBe("김");
-    expect(qs.get("purpose")).toBe("GOLD_BAR");
+    expect(qs.getAll("purpose")).toEqual(["GOLD_BAR", "STONE_PRODUCT"]);
+    expect(qs.get("frequencyLabel")).toBe("단골");
+    expect(qs.get("revenueLabel")).toBe("VIP");
     expect(qs.get("visitFrom")).toBe("2026-08-01");
     expect(qs.has("channel")).toBe(false);
     expect(qs.has("visitTo")).toBe(false);
@@ -93,11 +113,22 @@ describe("buildCustomerSearchParams", () => {
 
   it("parse ↔ build 왕복 (방문일 포함)", () => {
     const qs = buildCustomerSearchParams(
-      filters({ q: "이영희", channel: "WALK_IN", visitFrom: "2026-01-02", visitTo: "2026-03-04" }),
+      filters({
+        q: "이영희",
+        channels: ["WALK_IN", "TMAP"],
+        visitFrom: "2026-01-02",
+        visitTo: "2026-03-04",
+      }),
     );
-    const parsed = parseCustomerFilters(Object.fromEntries(qs));
+    const params = new URLSearchParams(qs);
+    const sp: Record<string, string | string[]> = {};
+    for (const key of new Set(params.keys())) {
+      const values = params.getAll(key);
+      sp[key] = values.length > 1 ? values : values[0];
+    }
+    const parsed = parseCustomerFilters(sp);
     expect(parsed.q).toBe("이영희");
-    expect(parsed.channel).toBe("WALK_IN");
+    expect(parsed.channels).toEqual(["WALK_IN", "TMAP"]);
     expect(parsed.visitFrom).toBe("2026-01-02");
     expect(parsed.visitTo).toBe("2026-03-04");
   });
@@ -112,5 +143,7 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters(filters({ q: "김" }))).toBe(true);
     expect(hasActiveFilters(filters({ visitFrom: "2026-08-01" }))).toBe(true);
     expect(hasActiveFilters(filters({ visitTo: "2026-08-31" }))).toBe(true);
+    expect(hasActiveFilters(filters({ frequencyLabels: ["단골"] }))).toBe(true);
+    expect(hasActiveFilters(filters({ revenueLabels: ["VIP"] }))).toBe(true);
   });
 });

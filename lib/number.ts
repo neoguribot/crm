@@ -33,3 +33,33 @@ export function formatWon(value: string): string {
   const digits = sign ? intPart.slice(1) : intPart;
   return `${sign}${digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`;
 }
+
+/** 음수 아닌 십진 문자열을 정수(scaled bigint)로. `hasMaxDecimalPlaces` 통과를 전제로 한다. */
+function toScaledInt(value: string, decimalPlaces: number): bigint {
+  const [intPart, fracPartRaw = ""] = value.trim().split(".");
+  const fracPart = (fracPartRaw + "0".repeat(decimalPlaces)).slice(0, decimalPlaces);
+  return BigInt((intPart || "0") + fracPart);
+}
+
+function fromScaledInt(scaled: bigint, decimalPlaces: number): string {
+  const s = scaled.toString().padStart(decimalPlaces + 1, "0");
+  if (decimalPlaces === 0) return s;
+  const intPart = s.slice(0, -decimalPlaces) || "0";
+  const fracPart = s.slice(-decimalPlaces);
+  return `${intPart}.${fracPart}`;
+}
+
+/**
+ * 음수 아닌 십진 문자열 여러 개를 부동소수점 오차 없이 더한다.
+ * (BigInt 로 소수점 자리만큼 스케일링 후 정수 덧셈 — weight `numeric(10,3)` 등에 사용)
+ */
+export function sumDecimalStrings(
+  values: readonly string[],
+  decimalPlaces: number,
+): string {
+  const total = values.reduce(
+    (sum, v) => sum + toScaledInt(v, decimalPlaces),
+    BigInt(0),
+  );
+  return fromScaledInt(total, decimalPlaces);
+}

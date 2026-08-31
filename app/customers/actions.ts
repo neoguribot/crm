@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { genderToCode } from "@/lib/types/codes";
 import {
   customerFormDataToObject,
   customerInputSchema,
@@ -50,13 +51,18 @@ export async function createCustomer(
       phone: parsed.data.phone,
       email: parsed.data.email,
       birth_date: parsed.data.birth_date,
+      gender: genderToCode(parsed.data.gender),
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
+      inflow_channel_detail: parsed.data.inflow_channel_detail,
       purchase_purposes: parsed.data.purchase_purposes,
+      purchase_purpose_detail: parsed.data.purchase_purpose_detail,
+      frequency_label: parsed.data.frequency_label,
+      revenue_label: parsed.data.revenue_label,
+      referred_by_customer_id: parsed.data.referred_by_customer_id,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,
-      next_event_date: parsed.data.next_event_date,
       memo: parsed.data.memo,
     })
     .select("id")
@@ -94,6 +100,15 @@ export async function updateCustomer(
     };
   }
 
+  if (parsed.data.referred_by_customer_id === id) {
+    return {
+      status: "error",
+      message: "추천인으로 자기 자신을 선택할 수 없습니다.",
+      fieldErrors: { referred_by_customer_id: "추천인으로 자기 자신을 선택할 수 없습니다." },
+      values: raw,
+    };
+  }
+
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -112,13 +127,18 @@ export async function updateCustomer(
       phone: parsed.data.phone,
       email: parsed.data.email,
       birth_date: parsed.data.birth_date,
+      gender: genderToCode(parsed.data.gender),
       address: parsed.data.address,
       inflow_channels: parsed.data.inflow_channels,
+      inflow_channel_detail: parsed.data.inflow_channel_detail,
       purchase_purposes: parsed.data.purchase_purposes,
+      purchase_purpose_detail: parsed.data.purchase_purpose_detail,
+      frequency_label: parsed.data.frequency_label,
+      revenue_label: parsed.data.revenue_label,
+      referred_by_customer_id: parsed.data.referred_by_customer_id,
       registered_on: parsed.data.registered_on,
       first_trade_date: parsed.data.first_trade_date,
       last_contact_date: parsed.data.last_contact_date,
-      next_event_date: parsed.data.next_event_date,
       memo: parsed.data.memo,
     })
     .eq("id", id)

@@ -1,28 +1,49 @@
 import {
   PURCHASE_PURPOSES,
+  type ItemType,
   type PurchasePurpose,
+  type TradeStatus,
   type TradeType,
 } from "@/lib/types/database";
+import { codeToItemType, codeToTradeStatus, codeToTradeType } from "@/lib/types/codes";
 
 export type RecentTrade = {
   id: string;
   customer_id: string;
   customer_name: string;
   trade_type: TradeType;
-  /** 품목 코드 (0007 이후 text). 표시는 itemTypeLabel() 로. */
-  item_type: string;
+  /** 품목 코드. 표시는 itemTypeLabel() 로. */
+  item_type: ItemType;
+  /** numeric → 문자열 (정밀도 유지). 0007 이전 행은 null. */
+  unit_price: string | null;
+  /** numeric → 문자열 (정밀도 유지) */
+  weight: string;
   /** numeric → 문자열 (정밀도 유지) */
   amount: string;
+  status: TradeStatus;
   trade_date: string;
 };
+
+export type PurposeCounts = Record<PurchasePurpose, number>;
 
 export type DashboardSummary = {
   customerCount: number;
   monthSaleAmount: string;
   monthPurchaseAmount: string;
-  purposeCounts: Record<PurchasePurpose, number>;
+  purposeCounts: PurposeCounts;
+  purposeCountsToday: PurposeCounts;
+  purposeCountsWeek: PurposeCounts;
+  purposeCountsMonth: PurposeCounts;
+  purposeCountsYear: PurposeCounts;
   upcomingEventCount: number;
   recentTrades: RecentTrade[];
+  tradeCountToday: number;
+  tradeCountYesterday: number;
+  tradeCountWeek: number;
+  tradeCountMonth: number;
+  tradeCountYear: number;
+  tradeCountInProgress: number;
+  tradeCountDone: number;
 };
 
 function toCount(value: unknown): number {
@@ -37,9 +58,26 @@ function toAmountString(value: unknown): string {
   return "0";
 }
 
-const TRADE_TYPES_SET = new Set<TradeType>(["SALE", "PURCHASE"]);
+function toNullableAmountString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
 
-function isRecentTrade(value: unknown): value is RecentTrade {
+function normalizePurposeCounts(value: unknown): PurposeCounts {
+  const raw =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+  return Object.fromEntries(
+    PURCHASE_PURPOSES.map((p) => [p, toCount(raw[p])]),
+  ) as PurposeCounts;
+}
+
+function isRawRecentTrade(
+  value: unknown,
+): value is { id: string; customer_id: string; customer_name: string; trade_date: string; trade_type: number; item_type: number; status: number } {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
@@ -47,7 +85,9 @@ function isRecentTrade(value: unknown): value is RecentTrade {
     typeof v.customer_id === "string" &&
     typeof v.customer_name === "string" &&
     typeof v.trade_date === "string" &&
-    TRADE_TYPES_SET.has(v.trade_type as TradeType)
+    typeof v.trade_type === "number" &&
+    typeof v.item_type === "number" &&
+    typeof v.status === "number"
   );
 }
 
@@ -61,25 +101,21 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
     unknown
   >;
 
-  const rawPurpose =
-    typeof r.purpose_counts === "object" && r.purpose_counts !== null
-      ? (r.purpose_counts as Record<string, unknown>)
-      : {};
-
-  const purposeCounts = Object.fromEntries(
-    PURCHASE_PURPOSES.map((p) => [p, toCount(rawPurpose[p])]),
-  ) as Record<PurchasePurpose, number>;
-
   const recentTrades = Array.isArray(r.recent_trades)
     ? r.recent_trades
-        .filter(isRecentTrade)
+        .filter(isRawRecentTrade)
         .map((t) => ({
           id: t.id,
           customer_id: t.customer_id,
           customer_name: t.customer_name,
-          trade_type: t.trade_type,
-          item_type: String((t as Record<string, unknown>).item_type ?? ""),
-          amount: toAmountString((t as Record<string, unknown>).amount),
+          trade_type: codeToTradeType(t.trade_type),
+          item_type: codeToItemType(t.item_type),
+          unit_price: toNullableAmountString(
+            (t as unknown as Record<string, unknown>).unit_price,
+          ),
+          weight: toAmountString((t as unknown as Record<string, unknown>).weight),
+          amount: toAmountString((t as unknown as Record<string, unknown>).amount),
+          status: codeToTradeStatus(t.status),
           trade_date: t.trade_date,
         }))
         .slice(0, 5)
@@ -89,8 +125,19 @@ export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
     customerCount: toCount(r.customer_count),
     monthSaleAmount: toAmountString(r.month_sale_amount),
     monthPurchaseAmount: toAmountString(r.month_purchase_amount),
-    purposeCounts,
+    purposeCounts: normalizePurposeCounts(r.purpose_counts),
+    purposeCountsToday: normalizePurposeCounts(r.purpose_counts_today),
+    purposeCountsWeek: normalizePurposeCounts(r.purpose_counts_week),
+    purposeCountsMonth: normalizePurposeCounts(r.purpose_counts_month),
+    purposeCountsYear: normalizePurposeCounts(r.purpose_counts_year),
     upcomingEventCount: toCount(r.upcoming_event_count),
     recentTrades,
+    tradeCountToday: toCount(r.trade_count_today),
+    tradeCountYesterday: toCount(r.trade_count_yesterday),
+    tradeCountWeek: toCount(r.trade_count_week),
+    tradeCountMonth: toCount(r.trade_count_month),
+    tradeCountYear: toCount(r.trade_count_year),
+    tradeCountInProgress: toCount(r.trade_count_in_progress),
+    tradeCountDone: toCount(r.trade_count_done),
   };
 }

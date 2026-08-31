@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useActionState, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
+import { CalendarDateField } from "@/components/ui/calendar-date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -16,9 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ITEM_TYPE_LABELS, TRADE_TYPE_LABELS } from "@/lib/labels";
+import {
+  ITEM_TYPE_LABELS,
+  TRADE_STATUS_LABELS,
+  TRADE_TYPE_LABELS,
+} from "@/lib/labels";
 import {
   ITEM_TYPES,
+  TRADE_STATUSES,
   TRADE_TYPES,
   isPurchaseOnlyItemType,
 } from "@/lib/types/database";
@@ -32,6 +38,18 @@ type Action = (
   formData: FormData,
 ) => Promise<TradeFormState>;
 
+type TradeDefaults = {
+  trade_date: string;
+  trade_type: string;
+  item_type: string;
+  item_detail: string | null;
+  unit_price: string | null;
+  weight: string;
+  amount: string;
+  status: string;
+  memo: string | null;
+};
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
@@ -44,9 +62,16 @@ function FieldError({ message }: { message?: string }) {
 export function TradeForm({
   action,
   cancelHref,
+  submitLabel = "거래 등록",
+  defaults,
+  beforeFields,
 }: {
   action: Action;
   cancelHref: string;
+  submitLabel?: string;
+  defaults?: TradeDefaults;
+  /** 거래일 필드 앞에 끼워넣을 추가 필드(예: 고객 선택). */
+  beforeFields?: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(
     action,
@@ -56,8 +81,13 @@ export function TradeForm({
   const v = state.values;
   const e = state.fieldErrors;
 
-  const [tradeType, setTradeType] = useState<string>(v?.trade_type ?? "");
-  const [itemType, setItemType] = useState<string>(v?.item_type ?? "");
+  const val = (key: keyof TradeDefaults) =>
+    (v as Record<string, unknown> | null)?.[key] as string | undefined ??
+    (defaults ? (defaults[key] ?? "") : "");
+
+  const [tradeType, setTradeType] = useState<string>(val("trade_type") || "");
+  const [itemType, setItemType] = useState<string>(val("item_type") || "");
+  const [status, setStatus] = useState<string>(val("status") || "DONE");
 
   // 매입일 때만 매입 전용 품목을 노출한다.
   const itemOptions = useMemo(
@@ -91,14 +121,16 @@ export function TradeForm({
         </p>
       ) : null}
 
+      {beforeFields}
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="trade_date">
           거래일 <span className="text-destructive">*</span>
         </Label>
-        <DateInput
+        <CalendarDateField
           id="trade_date"
           name="trade_date"
-          defaultValue={v?.trade_date ?? ""}
+          defaultValue={val("trade_date")}
           required
         />
         <FieldError message={e.trade_date} />
@@ -112,7 +144,7 @@ export function TradeForm({
           name="trade_type"
           items={TRADE_TYPE_LABELS}
           value={tradeType || undefined}
-          onValueChange={(val) => onTradeTypeChange(String(val))}
+          onValueChange={(next) => onTradeTypeChange(String(next))}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="선택해 주세요" />
@@ -136,7 +168,7 @@ export function TradeForm({
           name="item_type"
           items={itemItems}
           value={itemType || undefined}
-          onValueChange={(val) => setItemType(String(val))}
+          onValueChange={(next) => setItemType(String(next))}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="선택해 주세요" />
@@ -167,7 +199,7 @@ export function TradeForm({
             name="item_detail"
             type="text"
             placeholder="예: 백금 반지"
-            defaultValue={v?.item_detail ?? ""}
+            defaultValue={val("item_detail")}
           />
           <FieldError message={e.item_detail} />
         </div>
@@ -183,7 +215,7 @@ export function TradeForm({
           id="unit_price"
           name="unit_price"
           placeholder="예: 155,000"
-          defaultValue={v?.unit_price ?? ""}
+          defaultValue={val("unit_price")}
           required
         />
         <FieldError message={e.unit_price} />
@@ -199,7 +231,7 @@ export function TradeForm({
           type="text"
           inputMode="decimal"
           placeholder="예: 3.75"
-          defaultValue={v?.weight ?? ""}
+          defaultValue={val("weight")}
           required
         />
         <FieldError message={e.weight} />
@@ -213,21 +245,42 @@ export function TradeForm({
           id="amount"
           name="amount"
           placeholder="예: 581,250"
-          defaultValue={v?.amount ?? ""}
+          defaultValue={val("amount")}
           required
         />
         <FieldError message={e.amount} />
       </div>
 
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">
+          완료 여부 <span className="text-destructive">*</span>
+        </legend>
+        <div className="flex gap-4">
+          {TRADE_STATUSES.map((code) => (
+            <label key={code} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="status"
+                value={code}
+                checked={status === code}
+                onChange={() => setStatus(code)}
+              />
+              {TRADE_STATUS_LABELS[code]}
+            </label>
+          ))}
+        </div>
+        <FieldError message={e.status} />
+      </fieldset>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="memo">비고</Label>
-        <Textarea id="memo" name="memo" rows={3} defaultValue={v?.memo ?? ""} />
+        <Textarea id="memo" name="memo" rows={3} defaultValue={val("memo")} />
         <FieldError message={e.memo} />
       </div>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "저장 중…" : "거래 등록"}
+          {pending ? "저장 중…" : submitLabel}
         </Button>
         <Button
           type="button"

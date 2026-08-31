@@ -1,25 +1,20 @@
 import "server-only";
 
 import type { Customer } from "@/lib/types/database";
+import { codeToGender } from "@/lib/types/codes";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { CustomerFilters } from "@/lib/customers/filters";
 import { customerMatchesQuery } from "@/lib/customers/match";
-import {
-  resolveLastVisitDate,
-  visitedWithin,
-} from "@/lib/customers/recent-visit";
+import { visitedWithin } from "@/lib/customers/recent-visit";
 
 const CUSTOMER_FIELDS =
-  "id, name, phone, email, birth_date, address, inflow_channels, purchase_purposes, registered_on, first_trade_date, last_contact_date, next_event_date, memo, created_at, updated_at";
+  "id, name, phone, email, birth_date, gender, address, inflow_channels, inflow_channel_detail, purchase_purposes, purchase_purpose_detail, frequency_label, revenue_label, referred_by_customer_id, registered_on, first_trade_date, last_contact_date, memo, created_at, updated_at";
 
-/** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(최근 방문일 계산용). */
+/** 목록: 필요한 스칼라 컬럼 + 거래일만 중첩(방문일 구간 필터 계산용). */
 const LIST_COLUMNS = `${CUSTOMER_FIELDS}, trade_records(trade_date)`;
 
 /** 상세/수정에 필요한 컬럼. */
-const DETAIL_COLUMNS = `${CUSTOMER_FIELDS}, stage`;
-
-/** stage 컬럼(마이그레이션 0004) 이 아직 없는 DB 를 위한 폴백. */
-const DETAIL_COLUMNS_NO_STAGE = CUSTOMER_FIELDS;
+const DETAIL_COLUMNS = CUSTOMER_FIELDS;
 
 export type CustomerDetail = Pick<
   Customer,
@@ -28,30 +23,24 @@ export type CustomerDetail = Pick<
   | "phone"
   | "email"
   | "birth_date"
+  | "gender"
   | "address"
   | "inflow_channels"
+  | "inflow_channel_detail"
   | "purchase_purposes"
+  | "purchase_purpose_detail"
+  | "frequency_label"
+  | "revenue_label"
+  | "referred_by_customer_id"
   | "registered_on"
   | "first_trade_date"
   | "last_contact_date"
-  | "next_event_date"
   | "memo"
   | "created_at"
   | "updated_at"
-> & {
-  /** 0004 미적용 DB 에서는 null. */
-  stage: Customer["stage"] | null;
-};
-
-/** 파이프라인 보드 카드에 필요한 컬럼. */
-const PIPELINE_COLUMNS = "id, name, phone, stage, next_event_date, updated_at";
-
-export type PipelineCustomer = Pick<
-  Customer,
-  "id" | "name" | "phone" | "stage" | "next_event_date" | "updated_at"
 >;
 
-/** 목록 행: 저장 컬럼 + 계산된 최근 방문일. */
+/** 목록 행: 표시에 필요한 컬럼. */
 export type CustomerListItem = Pick<
   Customer,
   | "id"
@@ -59,38 +48,31 @@ export type CustomerListItem = Pick<
   | "phone"
   | "inflow_channels"
   | "purchase_purposes"
+  | "frequency_label"
+  | "revenue_label"
   | "registered_on"
   | "first_trade_date"
+  | "last_contact_date"
   | "created_at"
-> & {
-  last_visit_date: string;
-};
+>;
 
 export type QueryResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-const MIGRATION_0008_HINT =
-  "고객 항목 개편에는 데이터베이스 마이그레이션(0008)이 필요합니다. supabase/migrations 를 확인하세요.";
+const MIGRATION_HINT =
+  "이 기능에는 최신 데이터베이스 마이그레이션이 필요합니다. supabase/migrations 를 확인하세요.";
 
-type RawListRow = Pick<
-  Customer,
-  | "id"
-  | "name"
-  | "phone"
-  | "email"
-  | "birth_date"
-  | "address"
-  | "inflow_channels"
-  | "purchase_purposes"
-  | "registered_on"
-  | "first_trade_date"
-  | "last_contact_date"
-  | "next_event_date"
-  | "memo"
-  | "created_at"
-  | "updated_at"
-> & { trade_records: { trade_date: string }[] | null };
+type RawRow = Omit<CustomerDetail, "gender"> & { gender: number };
+
+type RawListRow = RawRow & { trade_records: { trade_date: string }[] | null };
+
+function mapGenderRow<T extends { gender: number }>(
+  row: T,
+): Omit<T, "gender"> & { gender: Customer["gender"] } {
+  const { gender, ...rest } = row;
+  return { ...rest, gender: codeToGender(gender) };
+}
 
 /**
  * 로그인 사용자의 고객 목록을 검색·필터해서 반환한다.
@@ -115,7 +97,7 @@ export async function searchCustomers(
   if (error) {
     console.error("[customers] 목록 조회 실패:", error.message);
     if (error.code === "42703") {
-      return { ok: false, error: MIGRATION_0008_HINT };
+      return { ok: false, error: MIGRATION_HINT };
     }
     return {
       ok: false,
@@ -127,20 +109,18 @@ export async function searchCustomers(
 
   const mapped = rows.map((row) => {
     const tradeDates = (row.trade_records ?? []).map((t) => t.trade_date);
-    const lastVisit = resolveLastVisitDate(row.registered_on, [
-      row.first_trade_date,
-      ...tradeDates,
-    ]);
     const item: CustomerListItem = {
       id: row.id,
       name: row.name,
       phone: row.phone,
       inflow_channels: row.inflow_channels,
       purchase_purposes: row.purchase_purposes,
+      frequency_label: row.frequency_label,
+      revenue_label: row.revenue_label,
       registered_on: row.registered_on,
       first_trade_date: row.first_trade_date,
+      last_contact_date: row.last_contact_date,
       created_at: row.created_at,
-      last_visit_date: lastVisit,
     };
     // 방문일 = 고객 등록일 + 첫 거래일자 + 모든 거래일
     const visitDates = [
@@ -156,11 +136,31 @@ export async function searchCustomers(
       // 이름은 정확히 일치, 연락처는 부분 일치.
       if (!customerMatchesQuery(c.name, c.phone, filters.q)) return false;
 
-      if (filters.channel && !c.inflow_channels.includes(filters.channel)) {
+      if (
+        filters.channels.length > 0 &&
+        !c.inflow_channels.some((ch) => filters.channels.includes(ch))
+      ) {
         return false;
       }
 
-      if (filters.purpose && !c.purchase_purposes.includes(filters.purpose)) {
+      if (
+        filters.purposes.length > 0 &&
+        !c.purchase_purposes.some((p) => filters.purposes.includes(p))
+      ) {
+        return false;
+      }
+
+      if (
+        filters.frequencyLabels.length > 0 &&
+        !filters.frequencyLabels.includes(c.frequency_label)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.revenueLabels.length > 0 &&
+        !filters.revenueLabels.includes(c.revenue_label)
+      ) {
         return false;
       }
 
@@ -187,27 +187,16 @@ export async function getCustomerById(
 ): Promise<QueryResult<CustomerDetail | null>> {
   const supabase = await createServerSupabaseClient();
 
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from("customers")
     .select(DETAIL_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
-  // stage 컬럼(0004) 미적용 DB 폴백
-  if (error?.code === "42703") {
-    const fallback = await supabase
-      .from("customers")
-      .select(DETAIL_COLUMNS_NO_STAGE)
-      .eq("id", id)
-      .maybeSingle();
-    data = fallback.data ? { ...fallback.data, stage: null } : null;
-    error = fallback.error;
-  }
-
   if (error) {
     console.error("[customers] 상세 조회 실패:", error.message);
     if (error.code === "42703") {
-      return { ok: false, error: MIGRATION_0008_HINT };
+      return { ok: false, error: MIGRATION_HINT };
     }
     return {
       ok: false,
@@ -215,37 +204,29 @@ export async function getCustomerById(
     };
   }
 
-  return { ok: true, data: (data as CustomerDetail | null) ?? null };
+  const row = data as unknown as RawRow | null;
+  return { ok: true, data: row ? mapGenderRow(row) : null };
 }
 
-/**
- * 파이프라인 보드용 — 로그인 사용자의 모든 고객 (단계별 그룹은 호출 측에서).
- * 최근 이동/수정 순으로 정렬(updated_at desc) → 컬럼 안에서 최근 카드가 위로.
- */
-export async function getPipelineCustomers(): Promise<
-  QueryResult<PipelineCustomer[]>
-> {
+/** 추천인 이름 표시 등 가벼운 참조용 — id/name 만 조회한다. */
+export async function getCustomerBasicById(
+  id: string,
+): Promise<QueryResult<{ id: string; name: string } | null>> {
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from("customers")
-    .select(PIPELINE_COLUMNS)
-    .order("updated_at", { ascending: false });
+    .select("id, name")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) {
-    console.error("[customers] 파이프라인 조회 실패:", error.message);
-    if (error.code === "42703") {
-      return {
-        ok: false,
-        error:
-          "파이프라인 기능을 쓰려면 데이터베이스 마이그레이션(0004)이 필요합니다. supabase/migrations 를 확인하세요.",
-      };
-    }
+    console.error("[customers] 추천인 조회 실패:", error.message);
     return {
       ok: false,
-      error: "파이프라인을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      error: "고객 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
     };
   }
 
-  return { ok: true, data: (data ?? []) as unknown as PipelineCustomer[] };
+  return { ok: true, data: (data as { id: string; name: string } | null) ?? null };
 }

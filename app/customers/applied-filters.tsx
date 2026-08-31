@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import {
+  FREQUENCY_LABEL_LABELS,
+  INFLOW_CHANNEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
 import {
   buildCustomerSearchParams,
   hasActiveFilters,
@@ -22,18 +27,38 @@ export function AppliedFilters({ filters }: { filters: CustomerFilters }) {
       next: { ...filters, q: "" },
     });
   }
-  if (filters.purpose) {
+  for (const p of filters.purposes) {
     chips.push({
-      key: "purpose",
-      label: `방문 목적: ${PURCHASE_PURPOSE_LABELS[filters.purpose]}`,
-      next: { ...filters, purpose: null },
+      key: `purpose-${p}`,
+      label: `방문 목적: ${PURCHASE_PURPOSE_LABELS[p]}`,
+      next: { ...filters, purposes: filters.purposes.filter((x) => x !== p) },
     });
   }
-  if (filters.channel) {
+  for (const c of filters.channels) {
     chips.push({
-      key: "channel",
-      label: `유입 경로: ${INFLOW_CHANNEL_LABELS[filters.channel]}`,
-      next: { ...filters, channel: null },
+      key: `channel-${c}`,
+      label: `유입 경로: ${INFLOW_CHANNEL_LABELS[c]}`,
+      next: { ...filters, channels: filters.channels.filter((x) => x !== c) },
+    });
+  }
+  for (const f of filters.frequencyLabels) {
+    chips.push({
+      key: `frequencyLabel-${f}`,
+      label: `빈도 라벨: ${FREQUENCY_LABEL_LABELS[f]}`,
+      next: {
+        ...filters,
+        frequencyLabels: filters.frequencyLabels.filter((x) => x !== f),
+      },
+    });
+  }
+  for (const r of filters.revenueLabels) {
+    chips.push({
+      key: `revenueLabel-${r}`,
+      label: `매출 라벨: ${REVENUE_LABEL_LABELS[r]}`,
+      next: {
+        ...filters,
+        revenueLabels: filters.revenueLabels.filter((x) => x !== r),
+      },
     });
   }
   if (filters.visitFrom || filters.visitTo) {

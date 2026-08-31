@@ -11,13 +11,18 @@ const validBase = {
   phone: "010-1234-5678",
   email: "",
   birth_date: "",
+  gender: "UNKNOWN",
   address: "",
   inflow_channels: ["CARROT_MARKET", "KAKAO_MAP"],
+  inflow_channel_detail: "",
   purchase_purposes: ["PURCHASE", "GOLD_BAR"],
+  purchase_purpose_detail: "",
+  frequency_label: "신규",
+  revenue_label: "일반",
+  referred_by_customer_id: "",
   registered_on: "2026-01-10",
   first_trade_date: "",
   last_contact_date: "",
-  next_event_date: "",
   memo: "",
 };
 
@@ -41,8 +46,59 @@ describe("customerInputSchema", () => {
     expect(parsed.address).toBeNull();
     expect(parsed.first_trade_date).toBeNull();
     expect(parsed.last_contact_date).toBeNull();
-    expect(parsed.next_event_date).toBeNull();
+    expect(parsed.referred_by_customer_id).toBeNull();
     expect(parsed.memo).toBeNull();
+  });
+
+  it("성별 기본값은 UNKNOWN", () => {
+    const { gender: _gender, ...rest } = validBase;
+    expect(customerInputSchema.parse(rest).gender).toBe("UNKNOWN");
+  });
+
+  it("빈도 라벨 기본값은 신규, 매출 라벨 기본값은 일반", () => {
+    const { frequency_label: _f, revenue_label: _r, ...rest } = validBase;
+    const parsed = customerInputSchema.parse(rest);
+    expect(parsed.frequency_label).toBe("신규");
+    expect(parsed.revenue_label).toBe("일반");
+  });
+
+  it("올바른 빈도 라벨을 통과시키고 알 수 없는 값은 거부한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, frequency_label: "단골" })
+        .frequency_label,
+    ).toBe("단골");
+    expect(
+      customerInputSchema.safeParse({ ...validBase, frequency_label: "일반" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("올바른 매출 라벨을 통과시키고 알 수 없는 값은 거부한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, revenue_label: "VIP" })
+        .revenue_label,
+    ).toBe("VIP");
+    expect(
+      customerInputSchema.safeParse({ ...validBase, revenue_label: "다이아" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("추천인 id 는 빈 문자열/NONE이면 null, 값이 있으면 그대로 통과한다", () => {
+    expect(
+      customerInputSchema.parse({ ...validBase, referred_by_customer_id: "" })
+        .referred_by_customer_id,
+    ).toBeNull();
+    expect(
+      customerInputSchema.parse({ ...validBase, referred_by_customer_id: "NONE" })
+        .referred_by_customer_id,
+    ).toBeNull();
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        referred_by_customer_id: "11111111-1111-1111-1111-111111111111",
+      }).referred_by_customer_id,
+    ).toBe("11111111-1111-1111-1111-111111111111");
   });
 
   it("이름이 공백만이면 거부한다", () => {
@@ -68,11 +124,43 @@ describe("customerInputSchema", () => {
     ).toBe("hong@example.com");
   });
 
-  it("유입 경로를 1개 이상 선택해야 한다", () => {
+  it("유입 경로는 필수가 아니며 비워도 통과한다", () => {
+    const parsed = customerInputSchema.parse({ ...validBase, inflow_channels: [] });
+    expect(parsed.inflow_channels).toEqual([]);
+  });
+
+  it("유입 경로를 기타로 선택하면 세부 내용이 필요하다", () => {
     expect(
-      customerInputSchema.safeParse({ ...validBase, inflow_channels: [] })
-        .success,
+      customerInputSchema.safeParse({
+        ...validBase,
+        inflow_channels: ["OTHER"],
+        inflow_channel_detail: "",
+      }).success,
     ).toBe(false);
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        inflow_channels: ["OTHER"],
+        inflow_channel_detail: "지인 소개 블로그",
+      }).inflow_channel_detail,
+    ).toBe("지인 소개 블로그");
+  });
+
+  it("방문 목적을 기타로 선택하면 세부 내용이 필요하다", () => {
+    expect(
+      customerInputSchema.safeParse({
+        ...validBase,
+        purchase_purposes: ["OTHER"],
+        purchase_purpose_detail: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      customerInputSchema.parse({
+        ...validBase,
+        purchase_purposes: ["OTHER"],
+        purchase_purpose_detail: "시계 수리 문의",
+      }).purchase_purpose_detail,
+    ).toBe("시계 수리 문의");
   });
 
   it("알 수 없는 유입 경로·방문 목적을 거부한다", () => {
@@ -118,13 +206,6 @@ describe("customerInputSchema", () => {
           .success,
       ).toBe(false);
     }
-  });
-
-  it("미래 다음 이벤트 예정일은 허용한다", () => {
-    expect(
-      customerInputSchema.parse({ ...validBase, next_event_date: "2999-12-31" })
-        .next_event_date,
-    ).toBe("2999-12-31");
   });
 
   it("오늘 날짜의 등록일을 허용한다", () => {

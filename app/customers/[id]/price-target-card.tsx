@@ -110,8 +110,8 @@ export function PriceTargetCard({
             {!currentPricePerDon ? (
               <p className="text-xs text-muted-foreground">
                 현재 시세는{" "}
-                <Link href="/home" className="underline">
-                  홈
+                <Link href="/prices" className="underline">
+                  시세 관리
                 </Link>{" "}
                 에서 입력합니다.
               </p>

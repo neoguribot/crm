@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { todayInSeoul } from "@/lib/date";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { detectNewlyReached, parsePriceInt } from "@/lib/prices/target";
 
@@ -72,7 +71,7 @@ export async function savePriceTarget(
   }
 
   revalidatePath(`/customers/${customerId}`);
-  revalidatePath("/home");
+  revalidatePath("/prices");
   redirect(`/customers/${customerId}`);
 }
 
@@ -96,7 +95,7 @@ export async function deletePriceTarget(
   }
 
   revalidatePath(`/customers/${customerId}`);
-  revalidatePath("/home");
+  revalidatePath("/prices");
   redirect(`/customers/${customerId}`);
 }
 
@@ -108,10 +107,10 @@ type TargetRow = {
 };
 
 /**
- * 오늘(Asia/Seoul) 금 시세를 저장하고, 매수 희망 가격에 새로 도달한
- * 고객이 있으면 알림을 생성한다.
+ * 금 시세를 새 이력으로 등록하고(변동값이라 등록마다 쌓임), 매수 희망
+ * 가격에 새로 도달한 고객이 있으면 알림을 생성한다.
  */
-export async function saveTodayGoldPrice(
+export async function saveGoldPrice(
   _prev: PriceActionState,
   formData: FormData,
 ): Promise<PriceActionState> {
@@ -125,14 +124,12 @@ export async function saveTodayGoldPrice(
 
   const ownerId = await requireUserId();
   const supabase = await createServerSupabaseClient();
-  const today = todayInSeoul();
 
-  // 직전(오늘 이전) 시세
+  // 직전(등록 시점 기준 가장 최근) 시세
   const { data: prevRow, error: prevErr } = await supabase
     .from("gold_prices")
     .select("price_per_don::text")
-    .lt("price_date", today)
-    .order("price_date", { ascending: false })
+    .order("registered_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -146,19 +143,19 @@ export async function saveTodayGoldPrice(
   const prevPrice =
     (prevRow as { price_per_don: string } | null)?.price_per_don ?? null;
 
-  // 오늘 시세 upsert
-  const { error: saveErr } = await supabase.from("gold_prices").upsert(
-    {
+  // 새 시세 이력 등록
+  const { data: savedRow, error: saveErr } = await supabase
+    .from("gold_prices")
+    .insert({
       owner_id: ownerId,
-      price_date: today,
       price_per_don: String(price),
       source: "MANUAL",
-    },
-    { onConflict: "owner_id,price_date" },
-  );
+    })
+    .select("id")
+    .single();
 
-  if (saveErr) {
-    console.error("[prices] 시세 저장 실패:", saveErr.message);
+  if (saveErr || !savedRow) {
+    console.error("[prices] 시세 저장 실패:", saveErr?.message);
     return { ok: false, error: "시세를 저장하지 못했습니다." };
   }
 
@@ -170,7 +167,7 @@ export async function saveTodayGoldPrice(
   if (targetErr) {
     console.error("[prices] 목표가격 조회 실패:", targetErr.message);
     // 시세는 저장됐으므로 성공으로 보고, 알림만 생략
-    revalidatePath("/home");
+    revalidatePath("/prices");
     return { ok: true, error: null, newAlerts: 0 };
   }
 
@@ -185,7 +182,9 @@ export async function saveTodayGoldPrice(
 
   let created = 0;
   if (reached.length > 0) {
-    const dedupeKeys = reached.map((t) => `target:${t.id}:${today}`);
+    // dedupe_key 는 (목표, 이번 시세 등록 건) 단위 — 하루에 여러 번 오르내려도
+    // 실제로 다시 도달한 시점마다 각각 알림이 생성된다(같은 날 재알림 억제 안 함).
+    const dedupeKeys = reached.map((t) => `target:${t.id}:${savedRow.id}`);
     const { data: existing } = await supabase
       .from("notifications")
       .select("dedupe_key")
@@ -195,14 +194,14 @@ export async function saveTodayGoldPrice(
     );
 
     const toInsert = reached
-      .filter((t) => !existingSet.has(`target:${t.id}:${today}`))
+      .filter((t) => !existingSet.has(`target:${t.id}:${savedRow.id}`))
       .map((t) => ({
         owner_id: ownerId,
         type: "PRICE_TARGET_REACHED",
         customer_id: t.customer_id,
         title: `${t.customer_name} 고객의 매수 희망 가격에 도달했습니다.`,
         body: `매수 희망 ${Number(t.target_price_per_don).toLocaleString("ko-KR")}원/돈 · 현재 ${price.toLocaleString("ko-KR")}원/돈 · 전화 상담 추천`,
-        dedupe_key: `target:${t.id}:${today}`,
+        dedupe_key: `target:${t.id}:${savedRow.id}`,
       }));
 
     if (toInsert.length > 0) {
@@ -217,7 +216,55 @@ export async function saveTodayGoldPrice(
     }
   }
 
-  revalidatePath("/home");
+  revalidatePath("/prices");
   revalidatePath("/customers", "layout");
   return { ok: true, error: null, newAlerts: created };
+}
+
+/** 시세 이력 1건 수정 (금액만). */
+export async function updateGoldPrice(
+  priceId: string,
+  _prev: PriceActionState,
+  formData: FormData,
+): Promise<PriceActionState> {
+  const price = validatePrice(formData.get("price_per_don"));
+  if (price == null) {
+    return { ok: false, error: "금 1돈 시세를 원 단위 숫자로 입력해 주세요." };
+  }
+
+  await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase
+    .from("gold_prices")
+    .update({ price_per_don: String(price) })
+    .eq("id", priceId);
+
+  if (error) {
+    console.error("[prices] 시세 수정 실패:", error.message);
+    return { ok: false, error: "시세를 수정하지 못했습니다." };
+  }
+
+  revalidatePath("/prices");
+  return { ok: true, error: null };
+}
+
+/** 시세 이력 1건 삭제. */
+export async function deleteGoldPrice(
+  priceId: string,
+  _prev: PriceActionState,
+  _formData: FormData,
+): Promise<PriceActionState> {
+  await requireUserId();
+  const supabase = await createServerSupabaseClient();
+
+  const { error } = await supabase.from("gold_prices").delete().eq("id", priceId);
+
+  if (error) {
+    console.error("[prices] 시세 삭제 실패:", error.message);
+    return { ok: false, error: "시세를 삭제하지 못했습니다." };
+  }
+
+  revalidatePath("/prices");
+  return { ok: true, error: null };
 }

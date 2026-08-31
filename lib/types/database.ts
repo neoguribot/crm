@@ -75,15 +75,33 @@ export function isItemTypeAllowedForTradeType(
   return !isPurchaseOnlyItemType(itemType);
 }
 
-/** 고객 영업 단계 (파이프라인 보드의 컬럼). 순서대로. */
-export const CUSTOMER_STAGES = [
-  "NEW_INQUIRY",
-  "CONSULTING",
-  "QUOTE_SENT",
-  "PURCHASE_CONFIRMED",
-  "AFTER_CARE",
+/** 성별. DB에는 정수 코드로 저장(0=모름, 1=남성, 2=여성). */
+export const GENDERS = ["UNKNOWN", "MALE", "FEMALE"] as const;
+export type Gender = (typeof GENDERS)[number];
+
+/** 빈도 라벨(재방문 빈도). 수동 입력, DB 저장(자동 추천은 참고 배지). */
+export const FREQUENCY_LABELS = ["신규", "단골"] as const;
+export type FrequencyLabel = (typeof FREQUENCY_LABELS)[number];
+
+/** 매출 라벨(거래 금액). 수동 입력, DB 저장(자동 추천은 참고 배지). */
+export const REVENUE_LABELS = ["일반", "우수", "VIP"] as const;
+export type RevenueLabel = (typeof REVENUE_LABELS)[number];
+
+/** 거래 완료 여부. DB에는 정수 코드로 저장(1=완료, 2=진행중). */
+export const TRADE_STATUSES = ["DONE", "IN_PROGRESS"] as const;
+export type TradeStatus = (typeof TRADE_STATUSES)[number];
+
+/** 고객 일정(다음 일정) 종류. DB에는 정수 코드로 저장(1~7). */
+export const EVENT_TYPES = [
+  "INQUIRY",
+  "RESERVATION",
+  "CUSTOM_ORDER",
+  "REVISIT",
+  "PRICE_ALERT",
+  "BIRTHDAY",
+  "CHECK_IN",
 ] as const;
-export type CustomerStage = (typeof CUSTOMER_STAGES)[number];
+export type EventType = (typeof EVENT_TYPES)[number];
 
 // ─────────────────────────────────────────────────────────────
 // 행(Row) 타입 — SELECT 결과
@@ -103,16 +121,20 @@ export interface Customer {
   phone: string;
   email: string | null;
   birth_date: IsoDateString | null;
+  gender: Gender;
   address: string | null;
   inflow_channels: InflowChannel[];
+  inflow_channel_detail: string | null;
   purchase_purposes: PurchasePurpose[];
-  stage: CustomerStage;
+  purchase_purpose_detail: string | null;
+  frequency_label: FrequencyLabel;
+  revenue_label: RevenueLabel;
+  referred_by_customer_id: string | null;
   /** 고객 등록일 (기본값 오늘, 수정 가능) */
   registered_on: IsoDateString;
   /** 첫 거래일자 (선택) */
   first_trade_date: IsoDateString | null;
   last_contact_date: IsoDateString | null;
-  next_event_date: IsoDateString | null;
   memo: string | null;
   created_at: IsoTimestampString;
   updated_at: IsoTimestampString;
@@ -131,8 +153,33 @@ export interface TradeRecord {
   weight: NumericString;
   /** 총 금액(원) */
   amount: NumericString;
+  status: TradeStatus;
   trade_date: IsoDateString;
   memo: string | null;
+  created_at: IsoTimestampString;
+  updated_at: IsoTimestampString;
+}
+
+/** 고객 일정. 여러 건 동시 관리 가능, 거래와 선택적으로 연동(trade_id). */
+export interface CustomerEvent {
+  id: string;
+  owner_id: string;
+  customer_id: string;
+  trade_id: string | null;
+  event_type: EventType;
+  event_date: IsoDateString;
+  memo: string | null;
+  is_done: boolean;
+  created_at: IsoTimestampString;
+  updated_at: IsoTimestampString;
+}
+
+/** 사용자(직원) 프로필. 인증 자체는 Supabase Auth(auth.users)가 담당한다. */
+export interface AppUser {
+  id: string;
+  name: string | null;
+  registered_on: IsoDateString;
+  monthly_sales_goal: NumericString | null;
   created_at: IsoTimestampString;
   updated_at: IsoTimestampString;
 }
@@ -151,11 +198,11 @@ export interface PriceTarget {
 export const GOLD_PRICE_SOURCES = ["MANUAL", "API"] as const;
 export type GoldPriceSource = (typeof GOLD_PRICE_SOURCES)[number];
 
-/** 일자별 순금(24K) 시세, 1돈(3.75g) 기준. owner + price_date 유니크. */
+/** 순금(24K) 시세 이력, 1돈(3.75g) 기준. 등록할 때마다 새 행이 쌓인다. */
 export interface GoldPrice {
   id: string;
   owner_id: string;
-  price_date: IsoDateString;
+  registered_at: IsoTimestampString;
   price_per_don: NumericString;
   source: GoldPriceSource;
   created_at: IsoTimestampString;
@@ -189,13 +236,18 @@ export interface CustomerCreateInput {
   phone: string;
   email?: string | null;
   birth_date?: IsoDateString | null;
+  gender?: Gender;
   address?: string | null;
   inflow_channels: InflowChannel[];
+  inflow_channel_detail?: string | null;
   purchase_purposes: PurchasePurpose[];
+  purchase_purpose_detail?: string | null;
+  frequency_label?: FrequencyLabel;
+  revenue_label?: RevenueLabel;
+  referred_by_customer_id?: string | null;
   registered_on: IsoDateString;
   first_trade_date?: IsoDateString | null;
   last_contact_date?: IsoDateString | null;
-  next_event_date?: IsoDateString | null;
   memo?: string | null;
 }
 
@@ -209,6 +261,7 @@ export interface TradeRecordCreateInput {
   unit_price: NumericString;
   weight: NumericString;
   amount: NumericString;
+  status: TradeStatus;
   trade_date: IsoDateString;
   memo?: string | null;
 }
@@ -216,4 +269,17 @@ export interface TradeRecordCreateInput {
 /** 거래의 소속 고객은 수정하지 않는다. */
 export type TradeRecordUpdateInput = Partial<
   Omit<TradeRecordCreateInput, "customer_id">
+>;
+
+export interface CustomerEventCreateInput {
+  customer_id: string;
+  trade_id?: string | null;
+  event_type: EventType;
+  event_date: IsoDateString;
+  memo?: string | null;
+  is_done?: boolean;
+}
+
+export type CustomerEventUpdateInput = Partial<
+  Omit<CustomerEventCreateInput, "customer_id">
 >;

@@ -14,15 +14,24 @@ import {
   hasActiveFilters,
   parseCustomerFilters,
 } from "@/lib/customers/filters";
-import { INFLOW_CHANNEL_LABELS, PURCHASE_PURPOSE_LABELS } from "@/lib/labels";
+import { Badge } from "@/components/ui/badge";
+import {
+  FREQUENCY_LABEL_LABELS,
+  PURCHASE_PURPOSE_LABELS,
+  REVENUE_LABEL_LABELS,
+} from "@/lib/labels";
 import { requireUser } from "@/lib/supabase/require-user";
 import { AppliedFilters } from "@/app/customers/applied-filters";
+import { CopyContactsButton } from "@/app/customers/copy-contacts-button";
 import { CustomerFilterBar } from "@/app/customers/customer-filter-bar";
 import { DeleteCustomerButton } from "@/app/customers/delete-customer-button";
 
 export const metadata: Metadata = {
   title: "고객 목록",
 };
+
+// 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
+export const dynamic = "force-dynamic";
 
 export default async function CustomersPage({
   searchParams,
@@ -80,9 +89,14 @@ export default async function CustomersPage({
         </Card>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">
-            총 {result.data.length}명
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              총 {result.data.length}명
+            </p>
+            <CopyContactsButton
+              customers={result.data.map((c) => ({ name: c.name, phone: c.phone }))}
+            />
+          </div>
           <ul className="flex flex-col gap-3">
             {result.data.map((customer) => (
               <li key={customer.id}>
@@ -95,21 +109,21 @@ export default async function CustomersPage({
                       >
                         {customer.name}
                       </Link>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {customer.phone}
+                      <span className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {FREQUENCY_LABEL_LABELS[customer.frequency_label]}
+                        </Badge>
+                        <Badge variant="outline">
+                          {REVENUE_LABEL_LABELS[customer.revenue_label]}
+                        </Badge>
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {customer.phone}
+                        </span>
                       </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
-                      <span>
-                        유입 경로:{" "}
-                        {customer.inflow_channels.length > 0
-                          ? customer.inflow_channels
-                              .map((ch) => INFLOW_CHANNEL_LABELS[ch])
-                              .join(", ")
-                          : "없음"}
-                      </span>
                       <span>
                         방문 목적:{" "}
                         {customer.purchase_purposes.length > 0
@@ -119,7 +133,10 @@ export default async function CustomersPage({
                           : "없음"}
                       </span>
                       <span>
-                        최근 방문일: {formatKoreanDate(customer.last_visit_date)}
+                        마지막 연락일:{" "}
+                        {customer.last_contact_date
+                          ? formatKoreanDate(customer.last_contact_date)
+                          : "없음"}
                       </span>
                     </div>
                     <div className="flex gap-2">

@@ -2,8 +2,12 @@
 
 # CLAUDE.md
 
-고객관리 CRM (금은방). 이전 Spring Boot MVP 를 Next.js 스택으로 전환 중이다.
-과거 구현은 `archive/spring-boot-mvp` 브랜치와 `spring-boot-mvp` 태그에 보존되어 있다.
+금거래소 CRM (제일금거래소 일루이 대전관저점). Next.js + Supabase.
+이전 Spring Boot MVP 는 `archive/spring-boot-mvp` 브랜치와 태그에 보존되어 있다.
+
+이 저장소는 클라이언트 요구사항이 확정되기 전 프로토타입으로 시작했다. 코드와
+클라이언트 원본 요구사항이 다르면 **항상 원본 요구사항을 따른다** — 기존 코드에
+이미 구현돼 있다는 것은 그대로 둘 근거가 되지 못한다.
 
 ## 기술 스택 (확정)
 
@@ -25,58 +29,69 @@
 - `service_role` 키는 브라우저 코드/클라이언트 번들에 절대 포함하지 않는다. `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 - 모든 테이블에 Row Level Security 를 적용한다.
 - UI 는 Tailwind CSS 와 shadcn/ui 로 구성한다. React 등 외의 별도 프론트엔드 프레임워크를 추가하지 않는다.
-- 금액·중량·순도는 JavaScript 부동소수점 계산에 의존하지 않는다. PostgreSQL `numeric` 에 저장하고, 앱에서는 문자열로 받아 Decimal 라이브러리로 다룬다.
+- **DB 저장은 정수 코드**(성별 0/1/2, 거래구분 1/2, 거래품목 01~99, 완료여부 1/2).
+  앱 레벨(zod 검증·폼·라벨)은 가독성을 위해 문자열 식별자를 쓰고,
+  `lib/types/codes.ts` 가 Supabase 조회/저장 시점에만 변환한다. 새 코드값 필드를
+  추가할 때도 이 패턴을 따른다.
+- 금액·중량은 JavaScript 부동소수점 계산에 의존하지 않는다. PostgreSQL `numeric` 에
+  저장하고, 조회 시 `::text` 캐스팅해 문자열로 받는다(캐스팅을 빠뜨리면 숫자로
+  와서 포맷 함수가 깨진다 — 실제로 한 번 발생했던 버그).
 - 날짜/시간대 기준은 `Asia/Seoul` 고정이다. 순수 날짜는 `date`, 타임스탬프는 `timestamptz`(UTC 저장).
 - 환경변수와 비밀키를 Git 에 커밋하지 않는다. `.env.example` 에는 키 이름만 둔다.
-- 한 번에 하나의 작은 기능만 구현한다. MVP 범위 밖 기능을 임의로 추가하지 않는다.
 - 기존에 정상 작동하는 기능을 깨뜨리지 않는다.
 - 구현 후 타입 검사(`npx tsc --noEmit`), 린트(`npm run lint`), 빌드(`npm run build`), 관련 테스트를 실행한다.
-- 정상 작동이 확인된 단계마다 Git 커밋한다. 단, 사용자가 직접 확인하기 전에는 커밋하지 않는다.
+- 스키마 변경은 기존 마이그레이션 파일을 고치지 말고 다음 번호로 새 파일을 추가한다.
 
-## MVP 기능 범위 (단계별로 하나씩)
+## 기능 범위
 
-1. 고객 등록·조회·수정
-2. 고객별 거래 기록
-3. 고객 검색 및 세그먼트 필터
-4. 대시보드 요약
-5. 리마인드 대상 고객 표시
+1. 고객 정보 관리(조회·등록·수정·삭제)
+2. 거래 정보 관리(조회·등록·수정·삭제) — 고객 상세 안, `/transactions` 양쪽에서
+3. 시세 정보 관리(등록·이력·알림) — `/prices`
+4. 홈 대시보드(`/home`) — 일정 위젯, 매출 지표, 목표 도달 현황, 최근 거래, 방문목적 통계
+5. 고객 일정 관리(`customer_events`) — 여러 건 동시 관리, 거래와 선택적 연동
+6. 캘린더(`/calendar`), 종합 분석(`/analytics`)
 
-제외: 문자·카카오톡 자동발송, 결제·재고 연동, 복잡한 통계·그래프, 거래 수정·삭제.
+### 아직 없는 기능 (다음 단계)
+- 엑셀·PDF 내보내기
+- 사용자 설정 화면(비밀번호 변경 UI)
 
-## MVP 이후 추가 기능 (사용자 요청, 2026-08-28)
-
-- **고객 삭제** — 고객 목록의 각 행에서 삭제. **거래 기록이 있어도 삭제되고**, 그 고객의
-  거래 기록은 FK `on delete cascade` 로 함께 삭제된다(되돌릴 수 없음). `trade_records` 를
-  따로 삭제하는 정책은 없다. DB: `supabase/migrations/0003_customer_delete.sql`.
-- **영업 파이프라인** (`/pipeline`) — 고객을 영업 단계(신규 문의 → 상담 중 → 견적 발송 →
-  구매 확정 → 사후 관리)별 칸반 컬럼으로 본다. 카드 드래그(@dnd-kit) 또는 이전·다음 버튼,
-  고객 상세의 Select 로 단계를 옮긴다. DB: `customers.stage` (`supabase/migrations/0004_customer_stage.sql`).
+### 삭제된 기능
+- 파이프라인(`/pipeline`, 영업 단계 칸반 보드) — 원본 요구사항에 없어 삭제 확정.
+  `customers.stage`, `customer_stage` enum 도 함께 제거됨(`0011`).
+- `/reminders` 별도 페이지 — 원본 요구사항대로 홈 대시보드에 통합됨(필터 탭 포함).
 
 ## 데이터 모델
 
-- `customers` 1 : N `trade_records` (`trade_records.customer_id` FK)
-- id 는 UUID (`gen_random_uuid()`)
-- 구매목적 복수 선택은 PostgreSQL enum 배열 `purchase_purpose[]` (별도 관계 테이블 아님)
-- 금액 `numeric(15,0)`, 순도 `numeric(5,2)`, 중량 `numeric(10,3)`
+- `customers` 1 : N `trade_records`, 1 : N `customer_events`(일정, 거래와 선택적 연동)
+- `users` 는 `auth.users` 와 1:1 프로필(이름·목표값만, 인증 자체는 Supabase Auth)
+- id 는 UUID (`gen_random_uuid()`), owner 는 `owner_id`(모든 조회는 RLS 로 범위가 걸림)
+- 성별·거래구분·거래품목·완료여부는 **DB 정수 코드**(`lib/types/codes.ts` 참고).
+  방문목적·유입경로는 다중 선택이라 `text[]` (정수 코드화 대상 아님).
+- 금액 `numeric(15,0)`, 중량 `numeric(10,3)`, 시세 `numeric(15,0)`
 - 최근 방문일 / 리마인드 상태는 저장하지 않고 조회 시 계산
-  - 최근 방문일 = `max(trade_records.trade_date)` ∨ `customers.first_visit_date`
-  - 미방문 구간: 30 / 90 / 180 / 365일
-  - 리마인드 분류: 이벤트 지남 / 7일 이내 / 30일 이내 / 예정 없음
+  - 최근 방문일 = `max(trade_records.trade_date)` ∨ `customers.registered_on`
+  - 리마인드 분류(`customer_events.event_date` 기준, 홈 위젯 탭): 오늘(기본) / 기한 지남 / 7일 이내
+    (8일 이후는 어느 탭에도 표시하지 않음)
+- 시세(`gold_prices`)는 등록할 때마다 새 이력(`registered_at`)이 쌓인다 — 하루 1건
+  덮어쓰기 아님. 목표가 도달 알림의 `dedupe_key` 는 "목표+이번 시세 등록 건" 단위라
+  같은 날 여러 번 다시 도달해도 각각 알림이 생긴다.
 
-enum 값: 유입경로(DAANGN, NAVER_PLACE, ACQUAINTANCE_REFERRAL, WALK_IN, OTHER),
-구매목적(WEDDING_GIFT, FIRST_BIRTHDAY_RING, INVESTMENT_GOLD_BAR, BUY_BACK, OTHER),
-거래구분(SALE, PURCHASE), 품목(GOLD_BAR, JEWELRY_24K, GOLD_18K, GOLD_14K, SILVER, OTHER).
-코드값과 한국어 표시명을 분리한다.
+값 체계는 `lib/types/database.ts`(상수·타입), `lib/labels.ts`(한글 라벨),
+`lib/types/codes.ts`(DB 정수 변환)에 분리 관리한다.
 
 ## 명령
 
 ```bash
-npm run dev            # 개발 서버 (http://localhost:3000)
-npm run build          # 프로덕션 빌드
-npx tsc --noEmit       # 타입 검사
-npm run lint           # 린트
+npm run dev       # 개발 서버 (http://localhost:3000)
+npm run build     # 프로덕션 빌드
+npx tsc --noEmit  # 타입 검사
+npm run lint      # 린트
+npm run test      # 단위 테스트 (Vitest)
 ```
 
 ## 진행 상황
 
-- Next.js 16 스캐폴딩 완료 (`migrate/nextjs` 브랜치). 다음: shadcn/ui 초기화 + Supabase 클라이언트 유틸.
+Next.js + Supabase 스택으로 원본 요구사항 확정본 반영 완료(마이그레이션 `0001`~`0025`).
+addendum 요구사항(라벨 2축 분리·추천인·지표 카드)과 후속 UX 개선(홈 대시보드 개편,
+고객/거래 화면 필터·달력 개선, 종합분석 신규 지표)까지 반영됨. 후속 작업은 위
+"아직 없는 기능" 참고.

@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { Customer } from "@/lib/types/database";
+import type { EventType } from "@/lib/types/database";
+import { codeToEventType } from "@/lib/types/codes";
 import { todayInSeoul } from "@/lib/date";
 import type { QueryResult } from "@/lib/customers/queries";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -13,21 +14,27 @@ import {
   type RemindStatus,
 } from "@/lib/reminders/status";
 
-/** 리마인드 화면에 필요한 컬럼만. */
-const COLUMNS =
-  "id, name, phone, purchase_purposes, next_event_date, last_contact_date";
+/** 리마인드 화면에 필요한 컬럼만. 완료 처리된 일정은 대상에서 제외. */
+const COLUMNS = "id, event_type, event_date, memo, customers(id, name)";
 
-type RawRow = Pick<
-  Customer,
-  | "id"
-  | "name"
-  | "phone"
-  | "purchase_purposes"
-  | "next_event_date"
-  | "last_contact_date"
->;
+type RawRow = {
+  id: string;
+  event_type: number;
+  event_date: string;
+  memo: string | null;
+  customers: {
+    id: string;
+    name: string;
+  } | null;
+};
 
-export type ReminderCustomer = RawRow & {
+export type ReminderEvent = {
+  id: string;
+  event_type: EventType;
+  event_date: string;
+  customer_id: string;
+  name: string;
+  memo: string | null;
   status: RemindStatus;
   dayDelta: number | null;
 };
@@ -35,18 +42,17 @@ export type ReminderCustomer = RawRow & {
 export type ReminderData = {
   today: string;
   /** 활성 필터로 걸러진 목록 (정렬 유지) */
-  items: ReminderCustomer[];
+  items: ReminderEvent[];
   /** 각 필터값별 건수 + 기본 목록 건수 */
   counts: Record<RemindFilter, number> & { DEFAULT: number };
 };
 
 /**
- * 리마인드 대상 고객.
- * - 쿼리 1회. 고객별 반복 쿼리 없음.
- * - RLS(customers_select_own)로 로그인 사용자의 고객만.
- * - 리마인드 상태는 DB 에 저장하지 않고 next_event_date 로 계산.
- * - 정렬은 DB 에서: next_event_date 오름차순(null 은 뒤), 같으면 이름순.
- *   → 가장 오래 지난 기한 → 가장 가까운 예정 순으로 자연 정렬된다.
+ * 리마인드 대상 일정(customer_events, 미완료 건). 고객 1명이 여러 건을 가질 수
+ * 있으므로 이벤트 1건 = 목록 1행이다.
+ * - 쿼리 1회. 반복 쿼리 없음.
+ * - RLS(customer_events_select_own)로 로그인 사용자의 일정만.
+ * - 상태는 DB 에 저장하지 않고 event_date 로 계산.
  */
 export async function getReminderData(
   filter: RemindFilter | null,
@@ -54,10 +60,10 @@ export async function getReminderData(
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
-    .from("customers")
+    .from("customer_events")
     .select(COLUMNS)
-    .order("next_event_date", { ascending: true, nullsFirst: false })
-    .order("name", { ascending: true });
+    .eq("is_done", false)
+    .order("event_date", { ascending: true });
 
   if (error) {
     console.error("[reminders] 조회 실패:", error.message);
@@ -70,11 +76,20 @@ export async function getReminderData(
   const today = todayInSeoul();
   const rows = (data ?? []) as unknown as RawRow[];
 
-  const classified: ReminderCustomer[] = rows.map((row) => ({
-    ...row,
-    status: classifyRemindStatus(row.next_event_date, today),
-    dayDelta: remindDayDelta(row.next_event_date, today),
-  }));
+  const classified: ReminderEvent[] = rows
+    .filter((row): row is RawRow & { customers: NonNullable<RawRow["customers"]> } =>
+      row.customers !== null,
+    )
+    .map((row) => ({
+      id: row.id,
+      event_type: codeToEventType(row.event_type),
+      event_date: row.event_date,
+      customer_id: row.customers.id,
+      name: row.customers.name,
+      memo: row.memo,
+      status: classifyRemindStatus(row.event_date, today),
+      dayDelta: remindDayDelta(row.event_date, today),
+    }));
 
   const counts = {
     DEFAULT: classified.filter((c) => matchesRemindFilter(c.status, null)).length,

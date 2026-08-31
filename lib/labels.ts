@@ -4,10 +4,14 @@
  */
 
 import type {
-  CustomerStage,
+  EventType,
+  FrequencyLabel,
+  Gender,
   InflowChannel,
   ItemType,
   PurchasePurpose,
+  RevenueLabel,
+  TradeStatus,
   TradeType,
 } from "@/lib/types/database";
 
@@ -64,10 +68,34 @@ export function itemTypeLabel(code: string): string {
   return ITEM_TYPE_LABELS[code as ItemType] ?? code;
 }
 
-export const CUSTOMER_STAGE_LABELS: Record<CustomerStage, string> = {
-  NEW_INQUIRY: "신규 문의",
-  CONSULTING: "상담 중",
-  QUOTE_SENT: "견적 발송",
-  PURCHASE_CONFIRMED: "구매 확정",
-  AFTER_CARE: "사후 관리",
+export const GENDER_LABELS: Record<Gender, string> = {
+  UNKNOWN: "모름",
+  MALE: "남성",
+  FEMALE: "여성",
+};
+
+export const FREQUENCY_LABEL_LABELS: Record<FrequencyLabel, string> = {
+  신규: "신규",
+  단골: "단골",
+};
+
+export const REVENUE_LABEL_LABELS: Record<RevenueLabel, string> = {
+  일반: "일반",
+  우수: "우수",
+  VIP: "VIP",
+};
+
+export const TRADE_STATUS_LABELS: Record<TradeStatus, string> = {
+  DONE: "완료",
+  IN_PROGRESS: "진행 중",
+};
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  INQUIRY: "문의",
+  RESERVATION: "예약",
+  CUSTOM_ORDER: "맞춤 주문",
+  REVISIT: "재방문",
+  PRICE_ALERT: "시세 알림",
+  BIRTHDAY: "생일",
+  CHECK_IN: "안부",
 };
