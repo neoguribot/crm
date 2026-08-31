@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "고객 수정",
 };
 
+// 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
+export const dynamic = "force-dynamic";
+
 export default async function EditCustomerPage({
   params,
 }: {

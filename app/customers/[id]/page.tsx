@@ -41,6 +41,9 @@ export const metadata: Metadata = {
   title: "고객 상세",
 };
 
+// 인증 사용자별 데이터이므로 정적 캐시에 저장하지 않는다.
+export const dynamic = "force-dynamic";
+
 function Row({
   label,
   value,
